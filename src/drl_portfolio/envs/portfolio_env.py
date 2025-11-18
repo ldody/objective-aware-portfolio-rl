@@ -64,6 +64,7 @@ class PortfolioEnv(gym.Env):
 		)
 
 		self.timestamps = sorted(features.index.get_level_values("Timestamp").unique())
+		self.dates = np.array([ts.date() for ts in self.timestamps])  # one date per timestep
 		self._build_arrays()
 		self.reset(seed=None)
 
@@ -100,35 +101,78 @@ class PortfolioEnv(gym.Env):
 		self.return_history: List[float] = []
 		self.turnover_history: List[float] = []
 		self.done_flag = False
+
+		# Daily tracking
+		self.current_day = self.dates[self.t_idx]
+		self.day_start_equity = self.equity
+		self.daily_return_history: List[float] = []
+		self.daily_equity_history: List[float] = [1.0]  # relative to day start (1.0)
+		self.daily_turnover_sum: float = 0.0
+
 		return self._get_obs(), {}
+
 
 	def step(self, action: np.ndarray):
 		if self.done_flag:
 			return self._get_obs(), 0.0, True, False, {}
 
+		# ---- 1) Softmax -> weights ----
 		action = np.clip(action, -1.0, 1.0)
 		logits = action.astype(np.float64)
 		exp_logits = np.exp(logits - logits.max())
 		weights = exp_logits / exp_logits.sum()
 		weights = weights.astype(np.float32)
 
+		# ---- 2) Turnover & cost ----
 		turnover = float(np.sum(np.abs(weights - self.prev_weights)))
 		trading_cost = self.trading_cost * turnover
 
+		# ---- 3) Step return from log returns ----
 		step_ret_vec = self.ret_arr[self.t_idx, :]
 		portfolio_log_ret = float((weights * step_ret_vec).sum())
 		step_return = np.exp(portfolio_log_ret) - 1.0
-
 		step_return_after_cost = step_return - trading_cost
 
+		# ---- 4) Update global equity & histories ----
 		self.equity *= (1.0 + step_return_after_cost)
 		self.equity_history.append(self.equity)
 		self.return_history.append(step_return_after_cost)
 		self.turnover_history.append(turnover)
 
-		penalty = self._compute_penalty(step_return_after_cost, turnover)
+		# ---- 5) Daily tracking ----
+		current_date = self.dates[self.t_idx]
+
+		# If we moved to a new day, reset daily stats
+		if current_date != self.current_day:
+			self.current_day = current_date
+			self.day_start_equity = self.equity
+			self.daily_return_history = []
+			self.daily_equity_history = [1.0]
+			self.daily_turnover_sum = 0.0
+
+		# Update daily returns/equity relative to day start
+		self.daily_return_history.append(step_return_after_cost)
+		daily_equity = self.daily_equity_history[-1] * (1.0 + step_return_after_cost)
+		self.daily_equity_history.append(daily_equity)
+		self.daily_turnover_sum += turnover
+
+		# ---- 6) Compute penalty only at end-of-day ----
+		# End-of-day: either last timestep or next date != current_date
+		is_last_step = (self.t_idx == len(self.timestamps) - 1)
+		if not is_last_step:
+			next_date = self.dates[self.t_idx + 1]
+			end_of_day = (next_date != current_date)
+		else:
+			end_of_day = True
+
+		if end_of_day:
+			penalty = self._compute_daily_penalty()
+		else:
+			penalty = 0.0
+
 		reward = step_return_after_cost - penalty
 
+		# ---- 7) Move on ----
 		self.prev_weights = weights
 		self.t_idx += 1
 		if self.t_idx >= len(self.timestamps):
@@ -143,44 +187,71 @@ class PortfolioEnv(gym.Env):
 			"weights": weights,
 			"equity": self.equity,
 			"penalty": penalty,
+			"end_of_day": end_of_day,
+			"daily_equity": daily_equity,
 		}
 		return obs, reward, terminated, truncated, info
 
-	def _compute_penalty(self, step_return: float, turnover: float) -> float:
+
+	def _compute_daily_penalty(self) -> float:
+		"""
+		Compute penalties based on *daily* metrics:
+		  - cumulative daily return
+		  - daily turnover
+		  - daily intraday volatility
+		  - daily intraday drawdown
+		  - daily intraday Sharpe
+		  - daily stability (delta_return)
+		Called once at end-of-day.
+		"""
 		c = self.constraints
 		w = c.weights
 		penalty = 0.0
 
-		if step_return < c.min_return:
-			penalty += w.get("Return", 0.0) * (c.min_return - step_return)
+		# If no daily data (should not happen), no penalty
+		if len(self.daily_return_history) == 0:
+			return 0.0
 
-		if turnover > c.max_turnover:
-			penalty += w.get("Turnover", 0.0) * (turnover - c.max_turnover)
+		ret_arr = np.asarray(self.daily_return_history)
+		eq_arr = np.asarray(self.daily_equity_history)  # starts at 1.0
 
-		if len(self.return_history) > 5:
-			ret_arr = np.asarray(self.return_history[-50:])
-			vol = float(ret_arr.std())
-			if vol > c.max_volatility:
-				penalty += w.get("Volatility", 0.0) * (vol - c.max_volatility)
+		# 1) Daily cumulative return relative to day start
+		daily_return_cum = eq_arr[-1] - 1.0  # (equity_day - 1)
 
-			dr = float(np.diff(ret_arr).std()) if len(ret_arr) > 2 else 0.0
-			if dr > c.max_delta_return:
-				penalty += w.get("Delta_return", 0.0) * (dr - c.max_delta_return)
+		if daily_return_cum < c.min_return:
+			penalty += w.get("Return", 0.0) * (c.min_return - daily_return_cum)
 
-			eq_arr = np.asarray(self.equity_history)
-			running_max = np.maximum.accumulate(eq_arr)
-			drawdowns = (running_max - eq_arr) / (running_max + 1e-8)
-			max_dd = float(drawdowns.max())
-			if max_dd > c.max_dd:
-				penalty += w.get("Drowdown", 0.0) * (max_dd - c.max_dd)
+		# 2) Daily total turnover
+		daily_turnover = self.daily_turnover_sum
+		if daily_turnover > c.max_turnover:
+			penalty += w.get("Turnover", 0.0) * (daily_turnover - c.max_turnover)
 
-			mean_ret = float(ret_arr.mean())
-			std_ret = float(ret_arr.std() + 1e-8)
-			sharpe = mean_ret / std_ret
-			if sharpe < c.min_sharpe:
-				penalty += w.get("Sharp", 0.0) * (c.min_sharpe - sharpe)
+		# 3) Intraday volatility (std of 5-min returns within the day)
+		vol = float(ret_arr.std())
+		if vol > c.max_volatility:
+			penalty += w.get("Volatility", 0.0) * (vol - c.max_volatility)
+
+		# 4) Stability of returns (delta_return)
+		dr = float(np.diff(ret_arr).std()) if len(ret_arr) > 1 else 0.0
+		if dr > c.max_delta_return:
+			penalty += w.get("Delta_return", 0.0) * (dr - c.max_delta_return)
+
+		# 5) Intraday maximum drawdown (relative to day start)
+		running_max = np.maximum.accumulate(eq_arr)
+		drawdowns = (running_max - eq_arr) / (running_max + 1e-8)
+		max_dd = float(drawdowns.max())
+		if max_dd > c.max_dd:
+			penalty += w.get("Drowdown", 0.0) * (max_dd - c.max_dd)
+
+		# 6) Intraday Sharpe for the day
+		mean_ret = float(ret_arr.mean())
+		std_ret = float(ret_arr.std() + 1e-8)
+		sharpe = mean_ret / std_ret
+		if sharpe < c.min_sharpe:
+			penalty += w.get("Sharp", 0.0) * (c.min_sharpe - sharpe)
 
 		return float(penalty)
+
 
 	def render(self):
 		pass
@@ -189,5 +260,6 @@ class PortfolioEnv(gym.Env):
 class PortfolioEnvNoConstraints(PortfolioEnv):
 	"""Same environment but without constraint penalties (baseline DRL)."""
 
-	def _compute_penalty(self, step_return: float, turnover: float) -> float:
+	def _compute_daily_penalty(self) -> float:
 		return 0.0
+
