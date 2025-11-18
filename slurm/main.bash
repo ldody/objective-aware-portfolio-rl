@@ -2,12 +2,12 @@
 #SBATCH --time=24:00:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
-#SBATCH --ntasks-per-node=20
+#SBATCH --ntasks-per-node=1
 #SBATCH --mem-per-cpu=4000
 #SBATCH --mail-type=all
 #SBATCH --mail-user=leo.dody1@univ-lyon3.fr
-#SBATCH --output=ANN_model.out #/dev/null
-#SBATCH --job-name=ANN_model
+#SBATCH --output=DRL.out #/dev/null
+#SBATCH --job-name=DRL
 #SBATCH --partition=c6420-ib100
 
 
