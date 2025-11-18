@@ -3,12 +3,12 @@ from pathlib import Path
 import torch
 import os
 
-torch.set_num_threads(1000)          # PyTorch internal compute threads
-torch.set_num_interop_threads(1000)  # Cross-op parallelism
+torch.set_num_threads(20)          # PyTorch internal compute threads
+torch.set_num_interop_threads(20)  # Cross-op parallelism
 
-os.environ["OMP_NUM_THREADS"] = "1000"
-os.environ["MKL_NUM_THREADS"] = "1000"
-os.environ["NUMEXPR_NUM_THREADS"] = "1000"
+os.environ["OMP_NUM_THREADS"] = "20"
+os.environ["MKL_NUM_THREADS"] = "20"
+os.environ["NUMEXPR_NUM_THREADS"] = "20"
 
 # Ensure src/ is on the Python path
 base_dir = Path(__file__).resolve().parent
