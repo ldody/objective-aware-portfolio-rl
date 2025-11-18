@@ -13,7 +13,7 @@ from drl_portfolio.training.train_sac import run_full_experiment
 if __name__ == "__main__":
     data_dir = base_dir / "data"
     results_dir = base_dir / "results"
-    results_dir.mkdir(exist_ok=True)
+    #results_dir.mkdir(exist_ok=True)
 
     run_full_experiment(
         data_dir=data_dir,
