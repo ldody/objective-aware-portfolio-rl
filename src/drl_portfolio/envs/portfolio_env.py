@@ -171,7 +171,7 @@ class PortfolioEnv(gym.Env):
 			dr = float(np.diff(ret_arr).std()) if len(ret_arr) > 2 else 0.0
 			if dr > c.max_delta_return:
 				penalty += w.get("Delta_return", 0.0) * (dr - c.max_delta_return)
-				print('delta return',df,'max delta return',c.max_delta_return)
+				print('delta return',dr,'max delta return',c.max_delta_return)
 
 			eq_arr = np.asarray(self.equity_history)
 			running_max = np.maximum.accumulate(eq_arr)
