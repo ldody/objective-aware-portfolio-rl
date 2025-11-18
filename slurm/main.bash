@@ -2,7 +2,7 @@
 #SBATCH --time=24:00:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
-#SBATCH --ntasks-per-node=1
+#SBATCH --ntasks-per-node=20
 #SBATCH --mem-per-cpu=4000
 #SBATCH --mail-type=all
 #SBATCH --mail-user=leo.dody1@univ-lyon3.fr
@@ -18,6 +18,6 @@ source /home_nfs/polytech/leo.dody/PhD/Article_3/PhD_article_3/.venv/bin/activat
 
 export PYTHONUNBUFFERED=TRUE
 
-python3 ../main.py -cmb True 
+python3 ../main.py 
 
 deactivate
