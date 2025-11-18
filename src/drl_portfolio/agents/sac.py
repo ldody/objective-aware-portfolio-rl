@@ -53,7 +53,18 @@ class SACAgent:
 		self.q2_optim = torch.optim.Adam(self.q2.parameters(), lr=lr)
 
 	def sample_action(self, obs: np.ndarray, deterministic: bool = False) -> np.ndarray:
-		obs_t = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
+		"""
+		Supports both:
+		  - single obs: [obs_dim]
+		  - batch:      [batch_size, obs_dim]
+		"""
+		obs_arr = np.asarray(obs, dtype=np.float32)
+
+		if obs_arr.ndim == 1:
+			obs_t = torch.tensor(obs_arr, dtype=torch.float32, device=self.device).unsqueeze(0)
+		else:
+			obs_t = torch.tensor(obs_arr, dtype=torch.float32, device=self.device)
+
 		with torch.no_grad():
 			mean, log_std = self.actor(obs_t)
 			if deterministic:
@@ -63,7 +74,13 @@ class SACAgent:
 				normal = Normal(mean, std)
 				z = normal.rsample()
 				action = torch.tanh(z)
-		return action.cpu().numpy()[0]
+
+		actions = action.cpu().numpy()
+
+		# Return single action if input was single obs
+		if obs_arr.ndim == 1:
+			return actions[0]
+		return actions
 
 	def _evaluate_actions(self, obs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
 		mean, log_std = self.actor(obs)

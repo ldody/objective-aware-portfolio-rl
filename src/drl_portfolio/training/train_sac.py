@@ -12,7 +12,11 @@ from drl_portfolio.data import (
 	normalize_features,
 	train_test_split_time_based,
 )
-from drl_portfolio.envs import PortfolioEnv, PortfolioEnvNoConstraints
+from drl_portfolio.envs import (
+	PortfolioEnv,
+	PortfolioEnvNoConstraints,
+	VectorPortfolioEnv,
+)
 from drl_portfolio.utils.backtest import (
 	backtest_equal_weight,
 	backtest_mean_variance,
@@ -67,6 +71,76 @@ def train_sac_on_env(
 				agent.update(replay_buffer, cfg.batch_size)
 
 		print(f"Episode {ep+1}/{cfg.num_episodes} - reward: {ep_reward:.4f}")
+
+	return agent
+
+def train_sac_on_vec_env(
+	vec_env: VectorPortfolioEnv,
+	cfg: TrainingConfig,
+	actor_kwargs: Optional[Dict] = None,
+) -> SACAgent:
+	"""
+	Train SAC using several PortfolioEnv instances in parallel in one process.
+
+	vec_env: VectorPortfolioEnv wrapping N independent PortfolioEnv instances.
+	"""
+	obs_dim = vec_env.obs_dim
+	action_dim = vec_env.action_dim
+
+	base_env = vec_env.envs[0]  # reference for n_assets, n_features, window
+
+	agent = SACAgent(
+		obs_dim=obs_dim,
+		action_dim=action_dim,
+		n_assets=base_env.n_assets,
+		n_features=base_env.n_features,
+		window=base_env.window,
+		device=cfg.device,
+		actor_kwargs=actor_kwargs or {},
+		lr=cfg.learning_rate,
+	)
+
+	replay_buffer = ReplayBuffer(obs_dim, action_dim, size=cfg.buffer_size)
+	num_envs = vec_env.num_envs
+	total_steps = 0
+
+	for ep in range(cfg.num_episodes):
+		obs_batch = vec_env.reset()  # [num_envs, obs_dim]
+		done_batch = np.array([False] * num_envs)
+		ep_rewards = np.zeros(num_envs, dtype=np.float32)
+
+		# We run until ALL envs have terminated once in this episode.
+		while not done_batch.all():
+			# 1) sample batched actions: [num_envs, action_dim]
+			actions = agent.sample_action(obs_batch, deterministic=False)
+
+			# 2) vector env step
+			next_obs_batch, rew_batch, done_step, info_batch = vec_env.step(actions)
+
+			# 3) store transitions for each env
+			for i in range(num_envs):
+				replay_buffer.store(
+					obs_batch[i],
+					actions[i],
+					rew_batch[i],
+					next_obs_batch[i],
+					float(done_step[i]),  # 1.0 if done at this step
+				)
+
+			obs_batch = next_obs_batch
+			ep_rewards += rew_batch
+			# we track whether each env has *ever* been done in this episode
+			done_batch = np.logical_or(done_batch, done_step)
+			total_steps += num_envs
+
+			# 4) SAC updates
+			if total_steps >= cfg.warmup_steps and replay_buffer.ptr > cfg.batch_size:
+				agent.update(replay_buffer, cfg.batch_size)
+
+		print(
+			f"[Parallel] Episode {ep+1}/{cfg.num_episodes} "
+			f"- mean reward per env: {ep_rewards.mean():.4f}"
+		)
 
 	return agent
 
@@ -127,6 +201,32 @@ def run_full_experiment(
 		assets_df=assets_df,
 		params_df=params_df,
 		window=window,
+	)
+	
+	num_envs = 4
+	train_vec_env = VectorPortfolioEnv(
+		[
+			PortfolioEnv(
+				features=train_norm,
+				returns=train_ret,
+				assets_df=assets_df,
+				params_df=params_df,
+				window=window,
+			)
+			for _ in range(num_envs)
+		]
+	)
+	train_vec_env_nc = VectorPortfolioEnv(
+		[
+			PortfolioEnvNoConstraints(
+				features=train_norm,
+				returns=train_ret,
+				assets_df=assets_df,
+				params_df=params_df,
+				window=window,
+			)
+			for _ in range(num_envs)
+		]
 	)
 
 	print("\nTraining SAC (constraint-aware)...")
