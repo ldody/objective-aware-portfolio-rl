@@ -128,7 +128,6 @@ class PortfolioEnv(gym.Env):
 
 		penalty = self._compute_penalty(step_return_after_cost, turnover)
 		reward = step_return_after_cost - penalty
-		print('return',step_return,'return after cost',step_return_after_cost)
 
 		self.prev_weights = weights
 		self.t_idx += 1
@@ -151,27 +150,22 @@ class PortfolioEnv(gym.Env):
 		c = self.constraints
 		w = c.weights
 		penalty = 0.0
-		print(c)
 
 		if step_return < c.min_return:
 			penalty += w.get("Return", 0.0) * (c.min_return - step_return)
-			print('step return',step_return,'min return',c.min_return)
 
 		if turnover > c.max_turnover:
 			penalty += w.get("Turnover", 0.0) * (turnover - c.max_turnover)
-			print('turnover',turnover,'max turnover',c.max_turnover)
 
 		if len(self.return_history) > 5:
 			ret_arr = np.asarray(self.return_history[-50:])
 			vol = float(ret_arr.std())
 			if vol > c.max_volatility:
 				penalty += w.get("Volatility", 0.0) * (vol - c.max_volatility)
-				print('volatility',vol,'max volatility',c.max_volatility)
 
 			dr = float(np.diff(ret_arr).std()) if len(ret_arr) > 2 else 0.0
 			if dr > c.max_delta_return:
 				penalty += w.get("Delta_return", 0.0) * (dr - c.max_delta_return)
-				print('delta return',dr,'max delta return',c.max_delta_return)
 
 			eq_arr = np.asarray(self.equity_history)
 			running_max = np.maximum.accumulate(eq_arr)
@@ -179,7 +173,6 @@ class PortfolioEnv(gym.Env):
 			max_dd = float(drawdowns.max())
 			if max_dd > c.max_dd:
 				penalty += w.get("Drowdown", 0.0) * (max_dd - c.max_dd)
-				print('drowndown',max_dd,'max drowndown',c.max_dd)
 
 			mean_ret = float(ret_arr.mean())
 			std_ret = float(ret_arr.std() + 1e-8)
