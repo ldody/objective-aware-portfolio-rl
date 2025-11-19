@@ -230,11 +230,11 @@ def run_full_experiment(
 	)
 
 	print("\nTraining SAC (constraint-aware)...")
-	sac_agent = train_sac_on_env(train_vec_env, cfg)
+	sac_agent = train_sac_on_vec_env(train_vec_env, cfg)
 	#sac_agent = train_sac_on_env(train_env, cfg)
 
 	print("\nTraining SAC baseline (no constraints)...")
-	sac_agent_base = train_sac_on_env(train_vec_env_nc, cfg)
+	sac_agent_base = train_sac_on_vec_env(train_vec_env_nc, cfg)
 	#sac_agent_base = train_sac_on_env(train_env_nc, cfg)
 
 	print("\nBacktesting (bid/ask-based returns)...")
