@@ -27,6 +27,6 @@ if __name__ == "__main__":
 	run_full_experiment(
 		data_dir=data_dir,
 		results_dir=results_dir,
-		window=20,          # 20 previous timestamps
-		num_episodes=50,    # increase for real training
+		window=40,          # 20 previous timestamps
+		num_episodes=200,    # increase for real training
 	)
