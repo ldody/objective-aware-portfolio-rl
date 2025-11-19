@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from typing import Dict, Optional
+import numpy as np
 
 from drl_portfolio.agents import SACAgent
 from drl_portfolio.config import Paths, TrainingConfig
