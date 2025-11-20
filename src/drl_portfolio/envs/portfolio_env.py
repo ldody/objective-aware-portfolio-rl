@@ -200,7 +200,7 @@ class PortfolioEnv(gym.Env):
 			penalty = 0.0
 
 		# Reward (scaling à ajuster si besoin)
-		reward = 100.0 * (step_return_after_cost - penalty)
+		reward = step_return_after_cost - penalty * 0.1
 
 		# ---- 7) Move on ----
 		self.prev_weights = weights
