@@ -21,10 +21,10 @@ class SACAgent:
 		window: int,
 		device: str = "cpu",
 		actor_kwargs: Optional[Dict] = None,
-		gamma: float = 0.99,
+		gamma: float = 0.98,
 		tau: float = 0.005,
 		alpha: float = 0.2,
-		lr: float = 3e-4,
+		lr: float = 1e-3,
 		hidden_dim: int = 256,
 	):
 		self.device = device

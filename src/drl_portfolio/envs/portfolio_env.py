@@ -131,7 +131,7 @@ class PortfolioEnv(gym.Env):
 		step_ret_vec = self.ret_arr[self.t_idx, :]
 		portfolio_log_ret = float((weights * step_ret_vec).sum())
 		step_return = np.exp(portfolio_log_ret) - 1.0
-		step_return_after_cost = step_return - trading_cost
+		step_return_after_cost = step_return #- trading_cost
 
 		# ---- 4) Update global equity & histories ----
 		self.equity *= (1.0 + step_return_after_cost)
@@ -170,7 +170,7 @@ class PortfolioEnv(gym.Env):
 		else:
 			penalty = 0.0
 
-		reward = step_return_after_cost - penalty
+		reward = (step_return_after_cost - penalty) * 100.0
 
 		# ---- 7) Move on ----
 		self.prev_weights = weights
