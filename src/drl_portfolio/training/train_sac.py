@@ -174,36 +174,26 @@ def run_full_experiment(
 	train_norm, test_norm, _ = normalize_features(train_feat, test_feat)
 
 	print("Building environments...")
+
+	# ---------- ENVS D'ENTRAÎNEMENT ----------
 	train_env = PortfolioEnv(
 		features=train_norm,
 		returns=train_ret,
 		assets_df=assets_df,
 		params_df=params_df,
 		window=window,
+		mode="train",          # <--- IMPORTANT
+		# penalty_scale laisse la valeur par défaut (0.1) ou tu ajoutes cfg.penalty_scale si tu l'as dans TrainingConfig
 	)
-	test_env = PortfolioEnv(
-		features=test_norm,
-		returns=test_ret,
-		assets_df=assets_df,
-		params_df=params_df,
-		window=window,
-	)
-
 	train_env_nc = PortfolioEnvNoConstraints(
 		features=train_norm,
 		returns=train_ret,
 		assets_df=assets_df,
 		params_df=params_df,
 		window=window,
+		mode="train",          # <--- IMPORTANT
 	)
-	test_env_nc = PortfolioEnvNoConstraints(
-		features=test_norm,
-		returns=test_ret,
-		assets_df=assets_df,
-		params_df=params_df,
-		window=window,
-	)
-	
+
 	num_envs = 4
 	train_vec_env = VectorPortfolioEnv(
 		[
@@ -213,6 +203,7 @@ def run_full_experiment(
 				assets_df=assets_df,
 				params_df=params_df,
 				window=window,
+				mode="train",      # <--- IMPORTANT
 			)
 			for _ in range(num_envs)
 		]
@@ -225,24 +216,45 @@ def run_full_experiment(
 				assets_df=assets_df,
 				params_df=params_df,
 				window=window,
+				mode="train",      # <--- IMPORTANT
 			)
 			for _ in range(num_envs)
 		]
 	)
 
+	# ---------- ENVS DE BACKTEST ----------
+	# Ici : un seul gros épisode sur TOUTE la période test
+	test_env = PortfolioEnv(
+		features=test_norm,
+		returns=test_ret,
+		assets_df=assets_df,
+		params_df=params_df,
+		window=window,
+		mode="test",           # <--- TRES IMPORTANT
+	)
+	test_env_nc = PortfolioEnvNoConstraints(
+		features=test_norm,
+		returns=test_ret,
+		assets_df=assets_df,
+		params_df=params_df,
+		window=window,
+		mode="test",           # <--- TRES IMPORTANT
+	)
+
 	print("\nTraining SAC (constraint-aware)...")
 	sac_agent = train_sac_on_vec_env(train_vec_env, cfg)
-	#sac_agent = train_sac_on_env(train_env, cfg)
+	# sac_agent = train_sac_on_env(train_env, cfg)
 
 	print("\nTraining SAC baseline (no constraints)...")
 	sac_agent_base = train_sac_on_vec_env(train_vec_env_nc, cfg)
-	#sac_agent_base = train_sac_on_env(train_env_nc, cfg)
+	# sac_agent_base = train_sac_on_env(train_env_nc, cfg)
 
 	print("\nBacktesting (bid/ask-based returns)...")
+	# En mode "test", ces envs parcourent toute la période
 	bt_sac = backtest_policy(test_env, sac_agent, deterministic=True)
 	bt_sac_base = backtest_policy(test_env_nc, sac_agent_base, deterministic=True)
-	bt_eq = backtest_equal_weight(test_env)
-	bt_mv = backtest_mean_variance(test_env)
+	bt_eq = backtest_equal_weight(test_env_nc)  # equal-weight sans contraintes
+	bt_mv = backtest_mean_variance(test_env_nc)
 
 	res_sac = summarize_strategy("SAC constrained", bt_sac)
 	res_sac_base = summarize_strategy("SAC baseline", bt_sac_base)
