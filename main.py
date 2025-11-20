@@ -28,5 +28,5 @@ if __name__ == "__main__":
 		data_dir=data_dir,
 		results_dir=results_dir,
 		window=40,          # 20 previous timestamps
-		num_episodes=30,    # increase for real training
+		num_episodes=200,    # increase for real training
 	)

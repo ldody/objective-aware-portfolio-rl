@@ -66,8 +66,35 @@ class PortfolioEnv(gym.Env):
 		self.timestamps = sorted(features.index.get_level_values("Timestamp").unique())
 		self.dates = np.array([ts.date() for ts in self.timestamps])  # one date per timestep
 		self._build_arrays()
+		self._build_day_indices()
 		self.reset(seed=None)
 
+	def _build_day_indices(self) -> None:
+		"""Pré-calcul des indices de début/fin pour chaque journée."""
+		day_start_indices = []
+		day_end_indices = []
+
+		current_date = self.dates[0]
+		start_idx = 0
+
+		for i in range(1, len(self.timestamps)):
+			if self.dates[i] != current_date:
+				# fin du jour précédent
+				day_start_indices.append(start_idx)
+				day_end_indices.append(i - 1)
+				# nouveau jour
+				current_date = self.dates[i]
+				start_idx = i
+
+		# dernier jour
+		day_start_indices.append(start_idx)
+		day_end_indices.append(len(self.timestamps) - 1)
+
+		self.day_start_indices = np.array(day_start_indices, dtype=np.int32)
+		self.day_end_indices = np.array(day_end_indices, dtype=np.int32)
+		self.n_days = len(self.day_start_indices)
+
+	
 	def _build_arrays(self) -> None:
 		T = len(self.timestamps)
 		feat_arr = np.zeros((T, self.n_assets, self.n_features), dtype=np.float32)
@@ -94,7 +121,26 @@ class PortfolioEnv(gym.Env):
 
 	def reset(self, seed: Optional[int] = None, options=None):
 		super().reset(seed=seed)
-		self.t_idx = self.window
+
+		# --- 1) Choisir une journée aléatoire assez longue ---
+		# On veut au moins "window + 1" points dans la journée
+		valid = False
+		while not valid:
+			# gymnasium fournit self.np_random après super().reset(...)
+			day_idx = int(self.np_random.integers(0, self.n_days))
+			day_start = int(self.day_start_indices[day_idx])
+			day_end = int(self.day_end_indices[day_idx])
+			if day_end - day_start + 1 > self.window + 1:
+				valid = True
+
+		self.current_day_idx = day_idx
+		self.day_start_idx = day_start
+		self.day_end_idx = day_end
+
+		# On démarre à day_start_idx + window pour avoir un historique de taille "window"
+		self.t_idx = self.day_start_idx + self.window
+
+		# --- 2) Init des poids / equity / historiques ---
 		self.prev_weights = np.ones(self.n_assets, dtype=np.float32) / self.n_assets
 		self.equity = 1.0
 		self.equity_history: List[float] = [self.equity]
@@ -102,15 +148,14 @@ class PortfolioEnv(gym.Env):
 		self.turnover_history: List[float] = []
 		self.done_flag = False
 
-		# Daily tracking
+		# Tracking journalier (on repart à 1.0 pour la journée)
 		self.current_day = self.dates[self.t_idx]
 		self.day_start_equity = self.equity
 		self.daily_return_history: List[float] = []
-		self.daily_equity_history: List[float] = [1.0]  # relative to day start (1.0)
+		self.daily_equity_history: List[float] = [1.0]  # equity relative à début de journée
 		self.daily_turnover_sum: float = 0.0
 
 		return self._get_obs(), {}
-
 
 	def step(self, action: np.ndarray):
 		if self.done_flag:
@@ -131,7 +176,7 @@ class PortfolioEnv(gym.Env):
 		step_ret_vec = self.ret_arr[self.t_idx, :]
 		portfolio_log_ret = float((weights * step_ret_vec).sum())
 		step_return = np.exp(portfolio_log_ret) - 1.0
-		step_return_after_cost = step_return #- trading_cost
+		step_return_after_cost = step_return - trading_cost
 
 		# ---- 4) Update global equity & histories ----
 		self.equity *= (1.0 + step_return_after_cost)
@@ -139,47 +184,33 @@ class PortfolioEnv(gym.Env):
 		self.return_history.append(step_return_after_cost)
 		self.turnover_history.append(turnover)
 
-		# ---- 5) Daily tracking ----
-		current_date = self.dates[self.t_idx]
-
-		# If we moved to a new day, reset daily stats
-		if current_date != self.current_day:
-			self.current_day = current_date
-			self.day_start_equity = self.equity
-			self.daily_return_history = []
-			self.daily_equity_history = [1.0]
-			self.daily_turnover_sum = 0.0
-
-		# Update daily returns/equity relative to day start
+		# ---- 5) Daily tracking (on reste dans UNE journée) ----
 		self.daily_return_history.append(step_return_after_cost)
 		daily_equity = self.daily_equity_history[-1] * (1.0 + step_return_after_cost)
 		self.daily_equity_history.append(daily_equity)
 		self.daily_turnover_sum += turnover
 
-		# ---- 6) Compute penalty only at end-of-day ----
-		# End-of-day: either last timestep or next date != current_date
-		is_last_step = (self.t_idx == len(self.timestamps) - 1)
-		if not is_last_step:
-			next_date = self.dates[self.t_idx + 1]
-			end_of_day = (next_date != current_date)
-		else:
-			end_of_day = True
+		# ---- 6) Fin de journée = fin d'épisode ----
+		is_last_step_of_day = (self.t_idx >= self.day_end_idx)
+		end_of_day = is_last_step_of_day
 
 		if end_of_day:
 			penalty = self._compute_daily_penalty()
 		else:
 			penalty = 0.0
 
-		reward = (step_return_after_cost - penalty) * 100.0
+		# Reward (scaling à ajuster si besoin)
+		reward = 100.0 * (step_return_after_cost - penalty)
 
 		# ---- 7) Move on ----
 		self.prev_weights = weights
 		self.t_idx += 1
-		if self.t_idx >= len(self.timestamps):
+
+		terminated = bool(end_of_day)
+		if terminated:
 			self.done_flag = True
 
 		obs = self._get_obs()
-		terminated = self.done_flag
 		truncated = False
 		info = {
 			"step_return": step_return_after_cost,
@@ -191,7 +222,6 @@ class PortfolioEnv(gym.Env):
 			"daily_equity": daily_equity,
 		}
 		return obs, reward, terminated, truncated, info
-
 
 	def _compute_daily_penalty(self) -> float:
 		"""
