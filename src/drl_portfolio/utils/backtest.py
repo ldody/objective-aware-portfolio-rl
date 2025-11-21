@@ -12,7 +12,7 @@ def backtest_policy(env: PortfolioEnv, agent: SACAgent, deterministic: bool = Tr
 	obs, _ = env.reset()
 	done = False
 	weights_hist, returns_hist, equity_hist, turnover_hist = [], [], [], []
-	ts_hist = []  # <--- NOUVEAU
+	ts_hist = []
 
 	while not done:
 		action = agent.sample_action(obs, deterministic=deterministic)
@@ -25,25 +25,44 @@ def backtest_policy(env: PortfolioEnv, agent: SACAgent, deterministic: bool = Tr
 		turnover_hist.append(info["turnover"])
 
 		# timestamp vraiment visité à ce step
-		# t_idx a été incrémenté dans env.step, donc on prend t_idx-1
 		current_ts = env.timestamps[env.t_idx - 1]
 		ts_hist.append(current_ts)
+
+	# ---- DataFrames pour export CSV ----
+	ts_index = pd.to_datetime(ts_hist)
+
+	allocation_df = pd.DataFrame(
+		data=np.vstack(weights_hist),          # [T, n_assets]
+		index=ts_index,
+		columns=env.asset_codes,              # noms des actifs
+	)
+
+	performance_df = pd.DataFrame(
+		{
+			"step_return": np.asarray(returns_hist),
+			"equity": np.asarray(equity_hist),
+			"turnover": np.asarray(turnover_hist),
+		},
+		index=ts_index,
+	)
+	performance_df.index.name = "Timestamp"
 
 	return {
 		"weights": np.asarray(weights_hist),
 		"returns": np.asarray(returns_hist),
 		"equity": np.asarray(equity_hist),
 		"turnover": np.asarray(turnover_hist),
-		"timestamps": np.asarray(ts_hist),  # <--- CORRIGÉ
+		"timestamps": np.asarray(ts_hist),
+		"allocation": allocation_df,   # <--- NEW
+		"performance": performance_df, # <--- NEW
 	}
-
 
 
 def backtest_equal_weight(env: PortfolioEnv) -> Dict:
 	obs, _ = env.reset()
 	done = False
 	weights_hist, returns_hist, equity_hist, turnover_hist = [], [], [], []
-	ts_hist = []  # <--- NOUVEAU
+	ts_hist = []
 
 	w = np.ones(env.n_assets, dtype=np.float32) / env.n_assets
 	env.prev_weights = w.copy()
@@ -61,14 +80,33 @@ def backtest_equal_weight(env: PortfolioEnv) -> Dict:
 		current_ts = env.timestamps[env.t_idx - 1]
 		ts_hist.append(current_ts)
 
+	ts_index = pd.to_datetime(ts_hist)
+
+	allocation_df = pd.DataFrame(
+		data=np.vstack(weights_hist),
+		index=ts_index,
+		columns=env.asset_codes,
+	)
+
+	performance_df = pd.DataFrame(
+		{
+			"step_return": np.asarray(returns_hist),
+			"equity": np.asarray(equity_hist),
+			"turnover": np.asarray(turnover_hist),
+		},
+		index=ts_index,
+	)
+	performance_df.index.name = "Timestamp"
+
 	return {
 		"weights": np.asarray(weights_hist),
 		"returns": np.asarray(returns_hist),
 		"equity": np.asarray(equity_hist),
 		"turnover": np.asarray(turnover_hist),
-		"timestamps": np.asarray(ts_hist),  # <--- CORRIGÉ
+		"timestamps": np.asarray(ts_hist),
+		"allocation": allocation_df,   # NEW
+		"performance": performance_df, # NEW
 	}
-
 
 
 def mean_variance_weights(ret_matrix: np.ndarray, eps: float = 1e-6) -> np.ndarray:
@@ -93,6 +131,7 @@ def backtest_mean_variance(env: PortfolioEnv, window_steps: int = 96) -> Dict:
 	weights_hist, returns_hist, equity_hist, turnover_hist = [], [], [], []
 	equity = 1.0
 	prev_w = np.ones(env.n_assets, dtype=np.float32) / env.n_assets
+	ts_hist = []
 
 	for t in range(start_idx, T):
 		if (t - start_idx) % window_steps == 0:
@@ -117,13 +156,34 @@ def backtest_mean_variance(env: PortfolioEnv, window_steps: int = 96) -> Dict:
 		turnover_hist.append(turnover)
 
 		prev_w = w
+		ts_hist.append(timestamps[t])
+
+	ts_index = pd.to_datetime(ts_hist)
+
+	allocation_df = pd.DataFrame(
+		data=np.vstack(weights_hist),
+		index=ts_index,
+		columns=env.asset_codes,
+	)
+
+	performance_df = pd.DataFrame(
+		{
+			"step_return": np.asarray(returns_hist),
+			"equity": np.asarray(equity_hist),
+			"turnover": np.asarray(turnover_hist),
+		},
+		index=ts_index,
+	)
+	performance_df.index.name = "Timestamp"
 
 	return {
 		"weights": np.asarray(weights_hist),
 		"returns": np.asarray(returns_hist),
 		"equity": np.asarray(equity_hist),
 		"turnover": np.asarray(turnover_hist),
-		"timestamps": timestamps[start_idx:],
+		"timestamps": np.asarray(ts_hist),
+		"allocation": allocation_df,   # NEW
+		"performance": performance_df, # NEW
 	}
 
 
