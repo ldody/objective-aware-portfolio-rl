@@ -151,16 +151,24 @@ def run_full_experiment(
 	results_dir: Path,
 	window: int = 20,
 	num_episodes: int = 50,
+	**kwargs
 ) -> None:
 	paths = Paths(data_dir=data_dir, results_dir=results_dir)
 	cfg = TrainingConfig(window=window, num_episodes=num_episodes)
 
 	print("Loading data...")
 	assets_df = load_assets(paths.assets_file)
-	assets_df = assets_df[assets_df['user_request'] == 1]
 	params_df = load_parameters(paths.params_file)
-	params_df = params_df[params_df['user_request'] == 1]
-	panel_df = load_and_merge_prices(assets_df, paths.raw_data_dir)
+
+	if kwargs:
+		assets_df = assets_df[assets_df['user_request'] == kwargs['user_request']]
+		params_df = params_df[params_df['user_request'] == kwargs['user_request']]
+		
+	else:
+		assets_df = assets_df[assets_df['user_request'] == 1]
+		params_df = params_df[params_df['user_request'] == 1]
+	
+	panel_df = load_and_merge_prices(assets_df, paths.raw_data_dir, **kwargs)
 
 	print("Engineering features (all columns + bid/ask returns)...")
 	feat_df, ret_df = engineer_features_and_returns(panel_df, window=window)

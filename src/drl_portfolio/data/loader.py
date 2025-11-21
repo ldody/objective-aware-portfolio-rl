@@ -24,6 +24,7 @@ def load_parameters(path: Path) -> pd.DataFrame:
 def load_and_merge_prices(
 	assets_df: pd.DataFrame,
 	raw_data_dir: Path,
+	**kwargs,
 ) -> pd.DataFrame:
 	"""Load per-asset intraday data and merge into a panel DataFrame.
 
@@ -43,6 +44,21 @@ def load_and_merge_prices(
 		df = pd.read_csv(file_path, header=[0,1], index_col=0)
 		df.columns = df.columns.get_level_values(1)
 		df.index = pd.to_datetime(df.index)
+		if kwargs:
+			df = df.resample(kwargs['timeframe']).agg({'ACVOL_UNS':'sum',
+													   'BID_HIGH_1':'max',
+													   'BID_LOW_1':'min',
+													   'OPEN_BID':'first',
+													   'BID':'last',
+													   'ASK_HIGH_1':'max',
+													   'ASK_LOW_1':'min',
+													   'OPEN_ASK':'first',
+													   'ASK':'last',
+													   'MID_HIGH':'max',
+													   'MID_LOW':'min',
+													   'MID_OPEN':'first',
+													   'MID_PRICE':'last'})
+			
 		df.reset_index(drop=False, inplace=True)
 		df["Local Code"] = code
 		dfs.append(df)
