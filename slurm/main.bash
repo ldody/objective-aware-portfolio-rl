@@ -6,8 +6,8 @@
 #SBATCH --mem-per-cpu=4000
 #SBATCH --mail-type=all
 #SBATCH --mail-user=leo.dody1@univ-lyon3.fr
-#SBATCH --output=DRL_%A_%a.out #/dev/null
-#SBATCH --job-name=DRL_%A_%a
+#SBATCH --output=DRL_%a.out #/dev/null
+#SBATCH --job-name=DRL_%a
 #SBATCH --partition=c6420-ib100
 #SBATCH --array=0-24%5
 
