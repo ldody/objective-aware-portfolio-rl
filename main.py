@@ -4,6 +4,7 @@ import torch
 import os
 import argparse
 import itertools
+import pandas as pd
 
 torch.set_num_threads(20)          # PyTorch internal compute threads
 torch.set_num_interop_threads(20)  # Cross-op parallelism
