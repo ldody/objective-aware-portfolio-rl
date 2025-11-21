@@ -28,7 +28,7 @@ if __name__ == "__main__":
 	results_dir.mkdir(exist_ok=True)
 	
 	parser = argparse.ArgumentParser()
-	parser.add_argument("--task-id", '-tid', type=int, default=None,
+	parser.add_argument("--task-id", type=int, default=None,
 						help="ID de la tâche dans l'array SLURM")
 	args = parser.parse_args()
 	
@@ -44,5 +44,5 @@ if __name__ == "__main__":
 		results_dir=results_dir,
 		window=50,          # 20 previous timestamps
 		num_episodes=200,    # increase for real training
-		**dict(df.iloc[args.tid]),
+		**dict(df.iloc[args.task_id]),
 	)
