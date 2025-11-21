@@ -32,12 +32,12 @@ if __name__ == "__main__":
 						help="ID de la tâche dans l'array SLURM")
 	args = parser.parse_args()
 	
-	user_resquest = [1,2,3,4,5]
+	user_request = [1,2,3,4,5]
 	timeframe = ['5min','15min','30min','1H','2H']
 
-	combinaisons = list(itertools.product(user_resquest, timeframe))
+	combinaisons = list(itertools.product(user_request, timeframe))
 
-	df = pd.DataFrame(combinaisons, columns=["user_resquest", "timeframe"])
+	df = pd.DataFrame(combinaisons, columns=["user_request", "timeframe"])
 	
 	run_full_experiment(
 		data_dir=data_dir,
