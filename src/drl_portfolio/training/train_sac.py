@@ -285,4 +285,4 @@ def run_full_experiment(
 	bt_mv["allocation"].to_csv(results_dir / "alloc_mean_variance.csv")
 	bt_mv["performance"].to_csv(results_dir / "perf_mean_variance.csv")
 
-	print(f"\nSaved metrics to: {out_path}")
+	print(f"\nSaved metrics to: {results_dir}")
