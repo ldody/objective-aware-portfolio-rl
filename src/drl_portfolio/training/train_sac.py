@@ -278,19 +278,19 @@ def run_full_experiment(
 
 	results_dir.mkdir(exist_ok=True)
 	# DRL constrained
-	bt_sac["allocation"].to_csv(results_dir / "alloc_sac_constrained.csv")
-	bt_sac["performance"].to_csv(results_dir / "perf_sac_constrained.csv")
+	bt_sac["allocation"].to_csv(results_dir / f"alloc_sac_constrained_{'_'.join(kwargs)}.csv")
+	bt_sac["performance"].to_csv(results_dir / f"perf_sac_constrained_{'_'.join(kwargs)}.csv")
 
 	# DRL baseline
-	bt_sac_base["allocation"].to_csv(results_dir / "alloc_sac_baseline.csv")
-	bt_sac_base["performance"].to_csv(results_dir / "perf_sac_baseline.csv")
+	bt_sac_base["allocation"].to_csv(results_dir / f"alloc_sac_baseline_{'_'.join(kwargs)}.csv")
+	bt_sac_base["performance"].to_csv(results_dir / f"perf_sac_baseline_{'_'.join(kwargs)}.csv")
 
 	# Equal-weight
-	bt_eq["allocation"].to_csv(results_dir / "alloc_equal_weight.csv")
-	bt_eq["performance"].to_csv(results_dir / "perf_equal_weight.csv")
+	bt_eq["allocation"].to_csv(results_dir / f"alloc_equal_weight_{'_'.join(kwargs)}.csv")
+	bt_eq["performance"].to_csv(results_dir / f"perf_equal_weight_{'_'.join(kwargs)}.csv")
 
 	# Mean-variance
-	bt_mv["allocation"].to_csv(results_dir / "alloc_mean_variance.csv")
-	bt_mv["performance"].to_csv(results_dir / "perf_mean_variance.csv")
+	bt_mv["allocation"].to_csv(results_dir / f"alloc_mean_variance_{'_'.join(kwargs)}.csv")
+	bt_mv["performance"].to_csv(results_dir / f"perf_mean_variance_{'_'.join(kwargs)}.csv")
 
 	print(f"\nSaved metrics to: {results_dir}")
