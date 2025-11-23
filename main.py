@@ -39,6 +39,8 @@ if __name__ == "__main__":
 
 	df = pd.DataFrame(combinaisons, columns=["user_request", "timeframe"])
 	
+	print(df.iloc[args.task_id])
+	
 	run_full_experiment(
 		data_dir=data_dir,
 		results_dir=results_dir,
