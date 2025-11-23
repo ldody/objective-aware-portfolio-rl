@@ -114,41 +114,65 @@ class PortfolioEnv(gym.Env):
 		self.ret_arr = ret_arr
 
 	def _get_obs(self) -> np.ndarray:
-		start = self.t_idx - self.window
+		start = max(0, self.t_idx - self.window)
 		end = self.t_idx
-		window_feat = self.feat_arr[start:end, :, :]  # [window, n_assets, n_features]
+		window_feat = self.feat_arr[start:end, :, :]  # [window, n_assets, n_features] or shorter at very beginning
+
+		# If start==0 and t_idx<window, you get a shorter history; in practice with our reset
+		# conditions we usually have full windows, but this is safe.
+
+		# If you want STRICTLY fixed-size windows, you can enforce t_idx >= window everywhere.
+		if end - start < self.window:
+			# Pad at the beginning with the earliest available rows
+			pad_len = self.window - (end - start)
+			first_slice = np.repeat(self.feat_arr[start:start+1, :, :], pad_len, axis=0)
+			window_feat = np.concatenate([first_slice, window_feat], axis=0)
+
 		window_feat = np.transpose(window_feat, (1, 0, 2))  # [n_assets, window, n_features]
 		obs = window_feat.reshape(-1)
 		obs = np.concatenate([obs, self.prev_weights], axis=0)
 		return obs.astype(np.float32)
 
+
 	def reset(self, seed: Optional[int] = None, options=None):
 		super().reset(seed=seed)
 
 		if self.mode == "train":
-			# --- 1) Choisir une journée aléatoire assez longue ---
-			valid = False
-			while not valid:
-				day_idx = int(self.np_random.integers(0, self.n_days))
-				day_start = int(self.day_start_indices[day_idx])
-				day_end = int(self.day_end_indices[day_idx])
-				if day_end - day_start + 1 > self.window + 1:
-					valid = True
+			# --- 1) Choose a random day whose first bar has at least `window` bars before it ---
+			# This ensures that when t_idx = day_start_idx, we can take a window
+			# [t_idx - window, t_idx) that may include the previous day.
+			day_start_indices = self.day_start_indices
+			# valid days: require that there are >= window timesteps BEFORE day_start_idx
+			valid_days = np.where(day_start_indices >= self.window)[0]
+
+			if len(valid_days) == 0:
+				# No day has enough global history to provide a full window including prev day
+				raise ValueError(
+					f"No training day has at least {self.window} prior timesteps "
+					f"(min day_start_idx={int(day_start_indices.min())}). "
+					f"Try reducing `window`."
+				)
+
+			day_idx = int(self.np_random.choice(valid_days))
+			day_start = int(self.day_start_indices[day_idx])
+			day_end = int(self.day_end_indices[day_idx])
 
 			self.current_day_idx = day_idx
 			self.day_start_idx = day_start
 			self.day_end_idx = day_end
 
-			# On démarre à day_start_idx + window pour avoir un historique de taille "window"
-			self.t_idx = self.day_start_idx + self.window
+			# Start the episode at the FIRST bar of the chosen day
+			# The observation at this step will use bars from previous day as context.
+			self.t_idx = self.day_start_idx
 
-		else:  # mode "test" : un seul épisode sur toute la période
+		else:
+			# mode "test": single long episode over full test period
 			self.day_start_idx = 0
 			self.day_end_idx = len(self.timestamps) - 1
 			self.current_day_idx = 0
-			self.t_idx = self.window  # on commence après la fenêtre initiale
+			self.t_idx = self.window  # first step has full global history
 
-		# --- 2) Init des poids / equity / historiques ---
+		# --- 2) Init portfolio state ---
 		self.prev_weights = np.ones(self.n_assets, dtype=np.float32) / self.n_assets
 		self.equity = 1.0
 		self.equity_history: List[float] = [self.equity]
@@ -156,14 +180,15 @@ class PortfolioEnv(gym.Env):
 		self.turnover_history: List[float] = []
 		self.done_flag = False
 
-		# Tracking journalier (reset au début de l'épisode)
+		# --- 3) Daily tracking (start of episode) ---
 		self.current_day = self.dates[self.t_idx]
 		self.day_start_equity = self.equity
 		self.daily_return_history: List[float] = []
-		self.daily_equity_history: List[float] = [1.0]  # equity relative à début de journée
+		self.daily_equity_history: List[float] = [1.0]  # relative to day start
 		self.daily_turnover_sum: float = 0.0
 
 		return self._get_obs(), {}
+
 
 	def step(self, action: np.ndarray):
 		if self.done_flag:
