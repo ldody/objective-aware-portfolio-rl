@@ -33,7 +33,7 @@ if __name__ == "__main__":
 	args = parser.parse_args()
 	
 	user_request = [1,2,3,4,5]
-	timeframe = ['5min','15min','30min','1H','2H']
+	timeframe = ['5min','15min','30min','1h','2h']
 
 	combinaisons = list(itertools.product(user_request, timeframe))
 
