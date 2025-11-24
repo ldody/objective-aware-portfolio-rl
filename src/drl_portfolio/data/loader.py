@@ -61,6 +61,7 @@ def load_and_merge_prices(
 													   'MID_PRICE':'last'})
 			
 			df = df.between_time("00:00", "06:30")
+			ddf.dropna(axis=1, inplace=True)
 			
 		df.reset_index(drop=False, inplace=True)
 		df["Local Code"] = code
