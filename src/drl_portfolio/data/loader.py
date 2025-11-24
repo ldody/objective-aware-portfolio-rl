@@ -60,9 +60,7 @@ def load_and_merge_prices(
 													   'MID_OPEN':'first',
 													   'MID_PRICE':'last'})
 			
-			df = df[df["heure"].dt.time.between(pd.to_datetime("00:00").time(), 
-												pd.to_datetime("06:30").time(), 
-												inclusive="both")
+			df = df.between_time("00:00", "06:30")
 			
 		df.reset_index(drop=False, inplace=True)
 		df["Local Code"] = code
