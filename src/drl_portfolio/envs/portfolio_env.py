@@ -43,8 +43,15 @@ class PortfolioEnv(gym.Env):
 		self.mode = mode
 		self.penalty_scale = penalty_scale
 
-		self.asset_codes: List[str] = list(self.assets["Local Code"])
+		# Real assets from CSV
+		real_asset_codes: List[str] = list(self.assets["Local Code"])
+
+		# Add synthetic CASH asset (no price history, return = 0, features = 0)
+		self.cash_code = "CASH"
+		self.asset_codes: List[str] = real_asset_codes + [self.cash_code]
+
 		self.n_assets: int = len(self.asset_codes)
+
 		self.feature_cols: List[str] = list(self.features.columns)
 		self.n_features: int = len(self.feature_cols)
 
