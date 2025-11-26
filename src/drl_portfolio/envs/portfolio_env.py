@@ -43,6 +43,7 @@ class PortfolioEnv(gym.Env):
 		self.mode = mode
 		self.penalty_scale = penalty_scale
 
+
 		# Real assets from CSV
 		real_asset_codes: List[str] = list(self.assets["Local Code"])
 
@@ -104,6 +105,11 @@ class PortfolioEnv(gym.Env):
 		self.day_start_indices = np.array(day_start_indices, dtype=np.int32)
 		self.day_end_indices = np.array(day_end_indices, dtype=np.int32)
 		self.n_days = len(self.day_start_indices)
+		
+		if self.days_per_episode > self.n_days:
+			raise ValueError(
+				f"days_per_episode={self.days_per_episode} > n_days={self.n_days}"
+			)
 
 	def _build_arrays(self) -> None:
 		T = len(self.timestamps)
@@ -152,7 +158,7 @@ class PortfolioEnv(gym.Env):
 		super().reset(seed=seed)
 
 		if self.mode == "train":
-			# --- 1) Choose a random day whose first bar has at least `window` bars before it ---
+			# --- 1) Choose a random *start* day whose first bar has at least `window` bars before it ---
 			# This ensures that when t_idx = day_start_idx, we can take a window
 			# [t_idx - window, t_idx) that may include the previous day.
 			day_start_indices = self.day_start_indices
@@ -167,17 +173,34 @@ class PortfolioEnv(gym.Env):
 					f"Try reducing `window`."
 				)
 
-			day_idx = int(self.np_random.choice(valid_days))
-			day_start = int(self.day_start_indices[day_idx])
-			day_end = int(self.day_end_indices[day_idx])
+			# We also need `days_per_episode` consecutive days
+			max_start_day = self.n_days - self.days_per_episode
+			valid_start_days = valid_days[valid_days <= max_start_day]
+			if len(valid_start_days) == 0:
+				raise ValueError(
+					f"No training day can be used as episode start with "
+					f"days_per_episode={self.days_per_episode} and window={self.window}."
+				)
 
-			self.current_day_idx = day_idx
-			self.day_start_idx = day_start
-			self.day_end_idx = day_end
+			start_day_idx = int(self.np_random.choice(valid_start_days))
+			end_day_idx = start_day_idx + self.days_per_episode - 1
 
-			# Start the episode at the FIRST bar of the chosen day
-			# The observation at this step will use bars from previous day as context.
+			self.episode_start_day_idx = start_day_idx
+			self.episode_end_day_idx = end_day_idx
+			self.current_day_idx = start_day_idx
+
+			self.day_start_idx = int(self.day_start_indices[start_day_idx])
+			self.day_end_idx = int(self.day_end_indices[end_day_idx])
+
+			# Start the episode at the FIRST bar of the chosen block of days
 			self.t_idx = self.day_start_idx
+		else:
+			# mode "test": single long episode over full test period
+			self.day_start_idx = 0
+			self.day_end_idx = len(self.timestamps) - 1
+			self.current_day_idx = 0
+			self.t_idx = self.window
+
 
 		else:
 			# mode "test": single long episode over full test period
@@ -278,8 +301,10 @@ class PortfolioEnv(gym.Env):
 		# Gestion de la fin d'épisode
 		terminated = False
 		if self.mode == "train":
-			# En train: 1 épisode = 1 journée
-			if end_of_day:
+			# En train: 1 épisode = `days_per_episode` journées consécutives
+			# On termine l'épisode quand on a fini la dernière journée de ce bloc.
+			# Note: self.t_idx has already been incremented by 1 just above.
+			if end_of_day and self.t_idx > self.day_end_idx:
 				terminated = True
 				self.done_flag = True
 		else:

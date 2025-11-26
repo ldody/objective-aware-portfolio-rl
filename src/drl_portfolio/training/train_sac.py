@@ -151,6 +151,7 @@ def run_full_experiment(
 	results_dir: Path,
 	window: int = 20,
 	num_episodes: int = 50,
+	num_day_per_ep: int = 2,
 	**kwargs
 ) -> None:
 	paths = Paths(data_dir=data_dir, results_dir=results_dir)
@@ -190,8 +191,8 @@ def run_full_experiment(
 		assets_df=assets_df,
 		params_df=params_df,
 		window=window,
-		mode="train",          # <--- IMPORTANT
-		# penalty_scale laisse la valeur par défaut (0.1) ou tu ajoutes cfg.penalty_scale si tu l'as dans TrainingConfig
+		mode="train",
+		days_per_episode=num_day_per_ep,
 	)
 	train_env_nc = PortfolioEnvNoConstraints(
 		features=train_norm,
@@ -199,7 +200,8 @@ def run_full_experiment(
 		assets_df=assets_df,
 		params_df=params_df,
 		window=window,
-		mode="train",          # <--- IMPORTANT
+		mode="train",
+		days_per_episode=num_day_per_ep,
 	)
 
 	num_envs = 4
@@ -211,7 +213,8 @@ def run_full_experiment(
 				assets_df=assets_df,
 				params_df=params_df,
 				window=window,
-				mode="train",      # <--- IMPORTANT
+				mode="train",
+				days_per_episode=num_day_per_ep,
 			)
 			for _ in range(num_envs)
 		]
@@ -224,7 +227,8 @@ def run_full_experiment(
 				assets_df=assets_df,
 				params_df=params_df,
 				window=window,
-				mode="train",      # <--- IMPORTANT
+				mode="train",
+				days_per_episode=num_day_per_ep,
 			)
 			for _ in range(num_envs)
 		]
