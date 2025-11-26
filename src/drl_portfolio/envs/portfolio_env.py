@@ -194,13 +194,12 @@ class PortfolioEnv(gym.Env):
 
 			# Start the episode at the FIRST bar of the chosen block of days
 			self.t_idx = self.day_start_idx
-		else:
-			# mode "test": single long episode over full test period
-			self.day_start_idx = 0
-			self.day_end_idx = len(self.timestamps) - 1
-			self.current_day_idx = 0
-			self.t_idx = self.window
-
+			else:
+				# mode "test": single long episode over full test period
+				self.day_start_idx = 0
+				self.day_end_idx = len(self.timestamps) - 1
+				self.current_day_idx = 0
+				self.t_idx = self.window
 
 		else:
 			# mode "test": single long episode over full test period
