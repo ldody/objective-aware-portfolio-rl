@@ -33,6 +33,7 @@ class PortfolioEnv(gym.Env):
 		trading_cost: float = 0.0005,
 		mode: str = "train",        # <-- NEW: "train" or "test"
 		penalty_scale: float = 0.1, # <-- NEW: échelle globale des pénalités
+		days_per_episode: int = 2,
 	):
 		super().__init__()
 		self.features = features
@@ -42,6 +43,7 @@ class PortfolioEnv(gym.Env):
 		self.trading_cost = trading_cost
 		self.mode = mode
 		self.penalty_scale = penalty_scale
+		self.days_per_episode = days_per_episode
 
 
 		# Real assets from CSV
