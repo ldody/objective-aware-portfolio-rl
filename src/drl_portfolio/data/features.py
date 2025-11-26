@@ -149,9 +149,17 @@ def engineer_features_and_returns(
 		numeric_cols.remove("ask_prev")
 
 	feature_df = df[numeric_cols].copy().fillna(0.0)
+	
+	# mid-price log return (no spread)
+	df["mid_price_prev"] = df.groupby(level="Local Code")["MID_PRICE"].shift(1)
+	df["log_return_mid"] = np.log(
+		(df["MID_PRICE"] / df["mid_price_prev"]).clip(lower=1e-12)
+	)
+	df["log_return_mid"] = df["log_return_mid"].fillna(0.0)
+
 
 	# target: execution log-returns (same as before)
-	return_df = df[["log_return_exec"]].copy()
+	return_df = df[["log_return_exec", "log_return_mid"]].copy()
 
 	return feature_df, return_df
 

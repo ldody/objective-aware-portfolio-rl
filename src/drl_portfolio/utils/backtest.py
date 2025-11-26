@@ -12,7 +12,7 @@ def backtest_policy(env: PortfolioEnv, agent: SACAgent, deterministic: bool = Tr
 	obs, _ = env.reset()
 	done = False
 	weights_hist, returns_hist, equity_hist, turnover_hist = [], [], [], []
-	ts_hist = []
+	ts_hist, spread_hist, fee_hist = [], [], []
 
 	while not done:
 		action = agent.sample_action(obs, deterministic=deterministic)
@@ -23,8 +23,9 @@ def backtest_policy(env: PortfolioEnv, agent: SACAgent, deterministic: bool = Tr
 		returns_hist.append(info["step_return"])
 		equity_hist.append(info["equity"])
 		turnover_hist.append(info["turnover"])
+		spread_hist.append(info.get("spread_cost", 0.0))
+		fee_hist.append(info.get("fee_cost", 0.0))
 
-		# timestamp vraiment visité à ce step
 		current_ts = env.timestamps[env.t_idx - 1]
 		ts_hist.append(current_ts)
 
@@ -52,9 +53,10 @@ def backtest_policy(env: PortfolioEnv, agent: SACAgent, deterministic: bool = Tr
 		"returns": np.asarray(returns_hist),
 		"equity": np.asarray(equity_hist),
 		"turnover": np.asarray(turnover_hist),
+		"spread_cost": np.asarray(spread_hist),
+		"fee_cost": np.asarray(fee_hist),
 		"timestamps": np.asarray(ts_hist),
-		"allocation": allocation_df,   # <--- NEW
-		"performance": performance_df, # <--- NEW
+		"asset_codes": env.asset_codes,
 	}
 
 

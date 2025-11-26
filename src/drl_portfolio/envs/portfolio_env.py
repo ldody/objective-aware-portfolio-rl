@@ -108,17 +108,24 @@ class PortfolioEnv(gym.Env):
 	def _build_arrays(self) -> None:
 		T = len(self.timestamps)
 		feat_arr = np.zeros((T, self.n_assets, self.n_features), dtype=np.float32)
-		ret_arr = np.zeros((T, self.n_assets), dtype=np.float32)
+		ret_exec_arr = np.zeros((T, self.n_assets), dtype=np.float32)
+		ret_mid_arr = np.zeros((T, self.n_assets), dtype=np.float32)
 
 		for t_idx, ts in enumerate(self.timestamps):
 			for a_idx, code in enumerate(self.asset_codes):
 				idx = (ts, code)
 				if idx in self.features.index:
 					feat_arr[t_idx, a_idx, :] = self.features.loc[idx].values
-					ret_arr[t_idx, a_idx] = self.returns.loc[idx].values[0]
+				if idx in self.returns.index:
+					row = self.returns.loc[idx]
+					# assumes columns ["log_return_exec","log_return_mid"]
+					ret_exec_arr[t_idx, a_idx] = float(row["log_return_exec"])
+					ret_mid_arr[t_idx, a_idx] = float(row["log_return_mid"])
 
 		self.feat_arr = feat_arr
-		self.ret_arr = ret_arr
+		self.ret_exec_arr = ret_exec_arr
+		self.ret_mid_arr = ret_mid_arr
+
 
 	def _get_obs(self) -> np.ndarray:
 		start = max(0, self.t_idx - self.window)
@@ -213,10 +220,24 @@ class PortfolioEnv(gym.Env):
 		trading_cost = self.trading_cost * turnover
 
 		# ---- 3) Step return from log returns ----
-		step_ret_vec = self.ret_arr[self.t_idx, :]
-		portfolio_log_ret = float((weights * step_ret_vec).sum())
-		step_return = np.exp(portfolio_log_ret) - 1.0
-		step_return_after_cost = step_return - trading_cost
+		# a) mid-price portfolio return (no spread, no fee)
+		step_ret_mid_vec = self.ret_mid_arr[self.t_idx, :]
+		portfolio_log_ret_mid = float((weights * step_ret_mid_vec).sum())
+		step_return_mid = np.exp(portfolio_log_ret_mid) - 1.0  # gross, no cost
+
+		# b) execution portfolio return (BID/ASK-based, includes spread)
+		step_ret_exec_vec = self.ret_exec_arr[self.t_idx, :]
+		portfolio_log_ret_exec = float((weights * step_ret_exec_vec).sum())
+		step_return_exec = np.exp(portfolio_log_ret_exec) - 1.0  # gross, but with spread/slippage
+
+		# c) explicit spread/slippage cost: mid - exec
+		spread_cost = step_return_mid - step_return_exec  # ≥ 0 on average
+
+		# d) trading fee cost from turnover
+		fee_cost = trading_cost  # you already computed trading_cost = self.trading_cost * turnover
+
+		# e) net return actually hitting the account
+		step_return_after_cost = step_return_exec - fee_cost
 
 		# ---- 4) Update global equity & histories ----
 		self.equity *= (1.0 + step_return_after_cost)
@@ -280,6 +301,10 @@ class PortfolioEnv(gym.Env):
 		truncated = False
 		info = {
 			"step_return": step_return_after_cost,
+			"step_return_mid": step_return_mid,
+			"step_return_exec": step_return_exec,
+			"spread_cost": spread_cost,
+			"fee_cost": fee_cost,
 			"turnover": turnover,
 			"weights": weights,
 			"equity": self.equity,
@@ -287,6 +312,7 @@ class PortfolioEnv(gym.Env):
 			"end_of_day": end_of_day,
 			"daily_equity": daily_equity,
 		}
+
 		return obs, reward, terminated, truncated, info
 
 	def _compute_daily_penalty(self) -> float:
