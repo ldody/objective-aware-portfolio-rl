@@ -234,28 +234,45 @@ class PortfolioEnv(gym.Env):
 		weights = weights.astype(np.float32)
 
 		# ---- 2) Turnover & cost ----
+		# L1 distance between old and new weights; in [0, 2].
+		# Interpreted as "fraction of wealth traded" this step.
 		turnover = float(np.sum(np.abs(weights - self.prev_weights)))
-		trading_cost = self.trading_cost * turnover
+		trading_cost = self.trading_cost * turnover  # fee proportional to traded notional
 
 		# ---- 3) Step return from log returns ----
 		# a) mid-price portfolio return (no spread, no fee)
 		step_ret_mid_vec = self.ret_mid_arr[self.t_idx, :]
 		portfolio_log_ret_mid = float((weights * step_ret_mid_vec).sum())
-		step_return_mid = np.exp(portfolio_log_ret_mid) - 1.0  # gross, no cost
+		step_return_mid = np.exp(portfolio_log_ret_mid) - 1.0  # gross, mark-to-mid
 
-		# b) execution portfolio return (BID/ASK-based, includes spread)
+		# b) execution portfolio "full-spread" return (for info / calibration)
+		#    This is the PnL we'd get if *all* notional effectively crossed the spread.
 		step_ret_exec_vec = self.ret_exec_arr[self.t_idx, :]
 		portfolio_log_ret_exec = float((weights * step_ret_exec_vec).sum())
-		step_return_exec = np.exp(portfolio_log_ret_exec) - 1.0  # gross, but with spread/slippage
+		step_return_exec_full = np.exp(portfolio_log_ret_exec) - 1.0  # full-spread case
 
-		# c) explicit spread/slippage cost: mid - exec
-		spread_cost = step_return_mid - step_return_exec  # ≥ 0 on average
+		# c) spread/slippage cost applied ONLY on traded notional
+		# base_spread = loss we'd incur if we "fully" crossed the spread with all capital
+		base_spread = step_return_mid - step_return_exec_full  # ≥ 0 on average
 
-		# d) trading fee cost from turnover
-		fee_cost = trading_cost  # you already computed trading_cost = self.trading_cost * turnover
+		# turnover is an L1 distance in [0, 2] between two weight vectors.
+		# Normalize to [0, 1] so:
+		#   - turnover == 0   -> no spread cost
+		#   - turnover == 2   -> pay full base_spread
+		turnover_norm = min(turnover / 2.0, 1.0)
+		spread_cost = base_spread * turnover_norm
+
+		# d) trading fee cost from turnover (commissions, etc.)
+		fee_cost = trading_cost
 
 		# e) net return actually hitting the account
-		step_return_after_cost = step_return_exec - fee_cost
+		# Start from mid-price mark-to-market, then subtract:
+		#   - spread on traded notional
+		#   - fees on traded notional
+		step_return_after_cost = step_return_mid - spread_cost - fee_cost
+
+		# For logging, define an "execution return" as mid minus the spread actually paid.
+		step_return_exec = step_return_mid - spread_cost
 
 		# ---- 4) Update global equity & histories ----
 		self.equity *= (1.0 + step_return_after_cost)
