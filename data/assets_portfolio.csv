@@ -1,91 +1,91 @@
-,user_request,prompt,model,run,Local Code
-0,01,prompt1,mistral,4,1743
-0,01,prompt1,mistral,4,1890
-0,01,prompt1,mistral,4,2186
-0,01,prompt1,mistral,4,25935
-0,01,prompt1,mistral,4,2769
-0,01,prompt1,mistral,4,2904
-0,01,prompt1,mistral,4,3065
-0,01,prompt1,mistral,4,3068
-0,01,prompt1,mistral,4,3140
-0,01,prompt1,mistral,4,3329
-0,01,prompt1,mistral,4,3497
-0,01,prompt1,mistral,4,5355
-0,01,prompt1,mistral,4,6937
-0,01,prompt1,mistral,4,7450
-0,01,prompt1,mistral,4,7451
-1,02,prompt2,mistral,4,4661
-1,02,prompt2,mistral,4,6098
-1,02,prompt2,mistral,4,6501
-1,02,prompt2,mistral,4,6503
-1,02,prompt2,mistral,4,6701
-1,02,prompt2,mistral,4,6702
-1,02,prompt2,mistral,4,6758
-1,02,prompt2,mistral,4,6857
-1,02,prompt2,mistral,4,6861
-1,02,prompt2,mistral,4,7011
-1,02,prompt2,mistral,4,7741
-1,02,prompt2,mistral,4,7751
-1,02,prompt2,mistral,4,7974
-1,02,prompt2,mistral,4,8035
-1,02,prompt2,mistral,4,9432
-1,02,prompt2,mistral,4,9433
-1,02,prompt2,mistral,4,9434
-1,02,prompt2,mistral,4,94345
-1,02,prompt2,mistral,4,94346
-1,02,prompt2,mistral,4,9984
-2,03,prompt3,chatgpt,2,1802
-2,03,prompt3,chatgpt,2,2802
-2,03,prompt3,chatgpt,2,3407
-2,03,prompt3,chatgpt,2,4005
-2,03,prompt3,chatgpt,2,4502
-2,03,prompt3,chatgpt,2,4503
-2,03,prompt3,chatgpt,2,4578
-2,03,prompt3,chatgpt,2,4911
-2,03,prompt3,chatgpt,2,6301
-2,03,prompt3,chatgpt,2,6383
-2,03,prompt3,chatgpt,2,6501
-2,03,prompt3,chatgpt,2,6645
-2,03,prompt3,chatgpt,2,6701
-2,03,prompt3,chatgpt,2,6758
-2,03,prompt3,chatgpt,2,8604
-3,04,prompt4,mistral,4,2001
-3,04,prompt4,mistral,4,2198
-3,04,prompt4,mistral,4,25935
-3,04,prompt4,mistral,4,2594
-3,04,prompt4,mistral,4,2908
-3,04,prompt4,mistral,4,3167
-3,04,prompt4,mistral,4,4801
-3,04,prompt4,mistral,4,50765
-3,04,prompt4,mistral,4,6073
-3,04,prompt4,mistral,4,6937
-3,04,prompt4,mistral,4,7962
-3,04,prompt4,mistral,4,8008
-3,04,prompt4,mistral,4,94345
-3,04,prompt4,mistral,4,94346
-3,04,prompt4,mistral,4,9832
-4,05,prompt5,mistral,4,2502
-4,05,prompt5,mistral,4,2503
-4,05,prompt5,mistral,4,2587
-4,05,prompt5,mistral,4,2802
-4,05,prompt5,mistral,4,2914
-4,05,prompt5,mistral,4,3382
-4,05,prompt5,mistral,4,5108
-4,05,prompt5,mistral,4,6098
-4,05,prompt5,mistral,4,6201
-4,05,prompt5,mistral,4,6501
-4,05,prompt5,mistral,4,6758
-4,05,prompt5,mistral,4,6857
-4,05,prompt5,mistral,4,6861
-4,05,prompt5,mistral,4,6902
-4,05,prompt5,mistral,4,7203
-4,05,prompt5,mistral,4,7267
-4,05,prompt5,mistral,4,7532
-4,05,prompt5,mistral,4,7550
-4,05,prompt5,mistral,4,7974
-4,05,prompt5,mistral,4,8035
-4,05,prompt5,mistral,4,8267
-4,05,prompt5,mistral,4,9432
-4,05,prompt5,mistral,4,94346
-4,05,prompt5,mistral,4,9983
-4,05,prompt5,mistral,4,9984
+,user_request,prompt,model,run,Local Code,Name (English)
+0,01,prompt1,mistral,4,1743,"KOATSU KOGYO CO.,LTD."
+1,01,prompt1,mistral,4,1890,"TOYO CONSTRUCTION CO.,LTD."
+2,01,prompt1,mistral,4,2186,Sobal Corporation
+3,01,prompt1,mistral,4,25935,"Class-A Preferred Stock of ITO EN,LTD."
+4,04,prompt4,mistral,4,25935,"Class-A Preferred Stock of ITO EN,LTD."
+5,01,prompt1,mistral,4,2769,"Village Vanguard CO.,LTD."
+6,01,prompt1,mistral,4,2904,"ICHIMASA KAMABOKO CO.,LTD."
+7,01,prompt1,mistral,4,3065,"Life Foods Co.,Ltd."
+8,01,prompt1,mistral,4,3068,WDI Corporation
+9,01,prompt1,mistral,4,3140,"BRUNO,Inc."
+10,01,prompt1,mistral,4,3329,"TOWA FOOD SERVICE CO.,LTD."
+11,01,prompt1,mistral,4,3497,LeTech Corporation
+12,01,prompt1,mistral,4,5355,"Nippon Crucible Co.,Ltd."
+13,01,prompt1,mistral,4,6937,"The Furukawa Battery Co.,Ltd."
+14,04,prompt4,mistral,4,6937,"The Furukawa Battery Co.,Ltd."
+15,01,prompt1,mistral,4,7450,"SUNDAY CO.,LTD."
+16,01,prompt1,mistral,4,7451,"Mitsubishi Shokuhin Co.,Ltd."
+17,02,prompt2,mistral,4,4661,"ORIENTAL LAND CO.,LTD."
+18,02,prompt2,mistral,4,6098,"Recruit Holdings Co.,Ltd."
+19,05,prompt5,mistral,4,6098,"Recruit Holdings Co.,Ltd."
+20,02,prompt2,mistral,4,6501,"Hitachi,Ltd."
+21,03,prompt3,chatgpt,2,6501,"Hitachi,Ltd."
+22,05,prompt5,mistral,4,6501,"Hitachi,Ltd."
+23,02,prompt2,mistral,4,6503,Mitsubishi Electric Corporation
+24,02,prompt2,mistral,4,6701,NEC Corporation
+25,03,prompt3,chatgpt,2,6701,NEC Corporation
+26,02,prompt2,mistral,4,6702,Fujitsu Limited
+27,02,prompt2,mistral,4,6758,SONY GROUP CORPORATION
+28,03,prompt3,chatgpt,2,6758,SONY GROUP CORPORATION
+29,05,prompt5,mistral,4,6758,SONY GROUP CORPORATION
+30,02,prompt2,mistral,4,6857,ADVANTEST CORPORATION
+31,05,prompt5,mistral,4,6857,ADVANTEST CORPORATION
+32,02,prompt2,mistral,4,6861,KEYENCE CORPORATION
+33,05,prompt5,mistral,4,6861,KEYENCE CORPORATION
+34,02,prompt2,mistral,4,7011,"Mitsubishi Heavy Industries,Ltd."
+35,02,prompt2,mistral,4,7741,HOYA CORPORATION
+36,02,prompt2,mistral,4,7751,CANON INC.
+37,02,prompt2,mistral,4,7974,"Nintendo Co.,Ltd."
+38,05,prompt5,mistral,4,7974,"Nintendo Co.,Ltd."
+39,02,prompt2,mistral,4,8035,Tokyo Electron Limited
+40,05,prompt5,mistral,4,8035,Tokyo Electron Limited
+41,02,prompt2,mistral,4,9432,"NTT,Inc."
+42,05,prompt5,mistral,4,9432,"NTT,Inc."
+43,02,prompt2,mistral,4,9433,KDDI CORPORATION
+44,02,prompt2,mistral,4,9434,SoftBank Corp.
+45,02,prompt2,mistral,4,94345,Series 1 Bond-Type Class Shares of SoftBank Corp.
+46,04,prompt4,mistral,4,94345,Series 1 Bond-Type Class Shares of SoftBank Corp.
+47,02,prompt2,mistral,4,94346,Series 2 Bond-Type Class Shares of SoftBank Corp
+48,04,prompt4,mistral,4,94346,Series 2 Bond-Type Class Shares of SoftBank Corp
+49,05,prompt5,mistral,4,94346,Series 2 Bond-Type Class Shares of SoftBank Corp
+50,02,prompt2,mistral,4,9984,SoftBank Group Corp.
+51,05,prompt5,mistral,4,9984,SoftBank Group Corp.
+52,03,prompt3,chatgpt,2,1802,OBAYASHI CORPORATION
+53,03,prompt3,chatgpt,2,2802,"Ajinomoto Co.,Inc."
+54,05,prompt5,mistral,4,2802,"Ajinomoto Co.,Inc."
+55,03,prompt3,chatgpt,2,3407,ASAHI KASEI CORPORATION
+56,03,prompt3,chatgpt,2,4005,"SUMITOMO CHEMICAL COMPANY,LIMITED"
+57,03,prompt3,chatgpt,2,4502,Takeda Pharmaceutical Company Limited
+58,03,prompt3,chatgpt,2,4503,Astellas Pharma Inc.
+59,03,prompt3,chatgpt,2,4578,"Otsuka Holdings Co.,Ltd."
+60,03,prompt3,chatgpt,2,4911,"Shiseido Company,Limited"
+61,03,prompt3,chatgpt,2,6301,KOMATSU LTD.
+62,03,prompt3,chatgpt,2,6383,"DAIFUKU CO.,LTD."
+63,03,prompt3,chatgpt,2,6645,OMRON Corporation
+64,03,prompt3,chatgpt,2,8604,"Nomura Holdings, Inc."
+65,04,prompt4,mistral,4,2001,NIPPN CORPORATION
+66,04,prompt4,mistral,4,2198,IKK Holdings Inc.
+67,04,prompt4,mistral,4,2594,KEY COFFEE INC
+68,04,prompt4,mistral,4,2908,"FUJICCO CO.,LTD."
+69,04,prompt4,mistral,4,3167,TOKAI Holdings Corporation
+70,04,prompt4,mistral,4,4801,"CENTRAL SPORTS CO.,LTD."
+71,04,prompt4,mistral,4,50765,Series 1 Bond-Type Class Shares of INFRONEER Holdings Inc.
+72,04,prompt4,mistral,4,6073,ASANTE INCORPORATED
+73,04,prompt4,mistral,4,7962,"KING JIM CO.,LTD."
+74,04,prompt4,mistral,4,8008,YONDOSHI HOLDINGS INC.
+75,04,prompt4,mistral,4,9832,"AUTOBACS SEVEN CO.,LTD."
+76,05,prompt5,mistral,4,2502,"Asahi Group Holdings,Ltd."
+77,05,prompt5,mistral,4,2503,"Kirin Holdings Company,Limited"
+78,05,prompt5,mistral,4,2587,Suntory Beverage & Food Limited
+79,05,prompt5,mistral,4,2914,JAPAN TOBACCO INC.
+80,05,prompt5,mistral,4,3382,"Seven & i Holdings Co.,Ltd."
+81,05,prompt5,mistral,4,5108,BRIDGESTONE CORPORATION
+82,05,prompt5,mistral,4,6201,TOYOTA INDUSTRIES CORPORATION
+83,05,prompt5,mistral,4,6902,DENSO CORPORATION
+84,05,prompt5,mistral,4,7203,TOYOTA MOTOR CORPORATION
+85,05,prompt5,mistral,4,7267,"HONDA MOTOR CO.,LTD."
+86,05,prompt5,mistral,4,7532,Pan Pacific International Holdings Corporation
+87,05,prompt5,mistral,4,7550,"ZENSHO HOLDINGS CO.,LTD."
+88,05,prompt5,mistral,4,8267,"AEON CO.,LTD."
+89,05,prompt5,mistral,4,9983,"FAST RETAILING CO.,LTD."
