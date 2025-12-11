@@ -1,4 +1,4 @@
-,user_request,prompt,LLM,attempt,parameter,value,weight
+,user_request,prompt,LLM,attempt,Parameters,Weight,Value
 0,01,prompt1,chatgpt,03,Return,0.0002,0.08
 1,01,prompt1,chatgpt,03,Turnover,0.02,0.02
 2,01,prompt1,chatgpt,03,Volatility,22.599189495690727,0.3
