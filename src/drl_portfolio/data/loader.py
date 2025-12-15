@@ -35,7 +35,7 @@ def load_and_merge_prices(
 	"""
 	dfs = []
 	for _, row in assets_df.iterrows():
-		code = row["Local Code"]
+		code = str(int(row["Local Code"]))
 		file_path = raw_data_dir / f"{code}.T.csv"
 		if not file_path.exists():
 			print(f"[WARN] Missing price file for {code}: {file_path}")
