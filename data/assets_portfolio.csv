@@ -1,82 +1,76 @@
-,user_request,prompt,model,run,Local Code,Name (English)
-"1,01,prompt1,mistral,4,1890,""TOYO CONSTRUCTION CO.,LTD."""
-2,01,prompt1,mistral,4,2186,Sobal Corporation
-"3,01,prompt1,mistral,4,25935,""Class-A Preferred Stock of ITO EN,LTD."""
-"4,04,prompt4,mistral,4,25935,""Class-A Preferred Stock of ITO EN,LTD."""
-"5,01,prompt1,mistral,4,2769,""Village Vanguard CO.,LTD."""
-"6,01,prompt1,mistral,4,2904,""ICHIMASA KAMABOKO CO.,LTD."""
-"7,01,prompt1,mistral,4,3065,""Life Foods Co.,Ltd."""
-8,01,prompt1,mistral,4,3068,WDI Corporation
-"9,01,prompt1,mistral,4,3140,""BRUNO,Inc."""
-"10,01,prompt1,mistral,4,3329,""TOWA FOOD SERVICE CO.,LTD."""
-"12,01,prompt1,mistral,4,5355,""Nippon Crucible Co.,Ltd."""
-"13,01,prompt1,mistral,4,6937,""The Furukawa Battery Co.,Ltd."""
-"14,04,prompt4,mistral,4,6937,""The Furukawa Battery Co.,Ltd."""
-"15,01,prompt1,mistral,4,7450,""SUNDAY CO.,LTD."""
-"17,02,prompt2,mistral,4,4661,""ORIENTAL LAND CO.,LTD."""
-"18,02,prompt2,mistral,4,6098,""Recruit Holdings Co.,Ltd."""
-"19,05,prompt5,mistral,4,6098,""Recruit Holdings Co.,Ltd."""
-"20,02,prompt2,mistral,4,6501,""Hitachi,Ltd."""
-"21,03,prompt3,chatgpt,2,6501,""Hitachi,Ltd."""
-"22,05,prompt5,mistral,4,6501,""Hitachi,Ltd."""
-23,02,prompt2,mistral,4,6503,Mitsubishi Electric Corporation
-24,02,prompt2,mistral,4,6701,NEC Corporation
-25,03,prompt3,chatgpt,2,6701,NEC Corporation
-26,02,prompt2,mistral,4,6702,Fujitsu Limited
-27,02,prompt2,mistral,4,6758,SONY GROUP CORPORATION
-28,03,prompt3,chatgpt,2,6758,SONY GROUP CORPORATION
-29,05,prompt5,mistral,4,6758,SONY GROUP CORPORATION
-30,02,prompt2,mistral,4,6857,ADVANTEST CORPORATION
-31,05,prompt5,mistral,4,6857,ADVANTEST CORPORATION
-32,02,prompt2,mistral,4,6861,KEYENCE CORPORATION
-33,05,prompt5,mistral,4,6861,KEYENCE CORPORATION
-"34,02,prompt2,mistral,4,7011,""Mitsubishi Heavy Industries,Ltd."""
-35,02,prompt2,mistral,4,7741,HOYA CORPORATION
-36,02,prompt2,mistral,4,7751,CANON INC.
-"37,02,prompt2,mistral,4,7974,""Nintendo Co.,Ltd."""
-"38,05,prompt5,mistral,4,7974,""Nintendo Co.,Ltd."""
-39,02,prompt2,mistral,4,8035,Tokyo Electron Limited
-40,05,prompt5,mistral,4,8035,Tokyo Electron Limited
-"41,02,prompt2,mistral,4,9432,""NTT,Inc."""
-"42,05,prompt5,mistral,4,9432,""NTT,Inc."""
-43,02,prompt2,mistral,4,9433,KDDI CORPORATION
-44,02,prompt2,mistral,4,9434,SoftBank Corp.
-50,02,prompt2,mistral,4,9984,SoftBank Group Corp.
-51,05,prompt5,mistral,4,9984,SoftBank Group Corp.
-52,03,prompt3,chatgpt,2,1802,OBAYASHI CORPORATION
-"53,03,prompt3,chatgpt,2,2802,""Ajinomoto Co.,Inc."""
-"54,05,prompt5,mistral,4,2802,""Ajinomoto Co.,Inc."""
-55,03,prompt3,chatgpt,2,3407,ASAHI KASEI CORPORATION
-"56,03,prompt3,chatgpt,2,4005,""SUMITOMO CHEMICAL COMPANY,LIMITED"""
-57,03,prompt3,chatgpt,2,4502,Takeda Pharmaceutical Company Limited
-58,03,prompt3,chatgpt,2,4503,Astellas Pharma Inc.
-"59,03,prompt3,chatgpt,2,4578,""Otsuka Holdings Co.,Ltd."""
-"60,03,prompt3,chatgpt,2,4911,""Shiseido Company,Limited"""
-61,03,prompt3,chatgpt,2,6301,KOMATSU LTD.
-"62,03,prompt3,chatgpt,2,6383,""DAIFUKU CO.,LTD."""
-63,03,prompt3,chatgpt,2,6645,OMRON Corporation
-"64,03,prompt3,chatgpt,2,8604,""Nomura Holdings, Inc."""
-65,04,prompt4,mistral,4,2001,NIPPN CORPORATION
-66,04,prompt4,mistral,4,2198,IKK Holdings Inc.
-67,04,prompt4,mistral,4,2594,KEY COFFEE INC
-"68,04,prompt4,mistral,4,2908,""FUJICCO CO.,LTD."""
-69,04,prompt4,mistral,4,3167,TOKAI Holdings Corporation
-"70,04,prompt4,mistral,4,4801,""CENTRAL SPORTS CO.,LTD."""
-72,04,prompt4,mistral,4,6073,ASANTE INCORPORATED
-"73,04,prompt4,mistral,4,7962,""KING JIM CO.,LTD."""
-74,04,prompt4,mistral,4,8008,YONDOSHI HOLDINGS INC.
-"75,04,prompt4,mistral,4,9832,""AUTOBACS SEVEN CO.,LTD."""
-"76,05,prompt5,mistral,4,2502,""Asahi Group Holdings,Ltd."""
-"77,05,prompt5,mistral,4,2503,""Kirin Holdings Company,Limited"""
-78,05,prompt5,mistral,4,2587,Suntory Beverage & Food Limited
-79,05,prompt5,mistral,4,2914,JAPAN TOBACCO INC.
-"80,05,prompt5,mistral,4,3382,""Seven & i Holdings Co.,Ltd."""
-81,05,prompt5,mistral,4,5108,BRIDGESTONE CORPORATION
-82,05,prompt5,mistral,4,6201,TOYOTA INDUSTRIES CORPORATION
-83,05,prompt5,mistral,4,6902,DENSO CORPORATION
-84,05,prompt5,mistral,4,7203,TOYOTA MOTOR CORPORATION
-"85,05,prompt5,mistral,4,7267,""HONDA MOTOR CO.,LTD."""
-86,05,prompt5,mistral,4,7532,Pan Pacific International Holdings Corporation
-"87,05,prompt5,mistral,4,7550,""ZENSHO HOLDINGS CO.,LTD."""
-"88,05,prompt5,mistral,4,8267,""AEON CO.,LTD."""
-"89,05,prompt5,mistral,4,9983,""FAST RETAILING CO.,LTD."""
+,user_request,prompt,model,run,Local Code,Name (English),ISIN
+1,1,prompt1,mistral,4,1890,"TOYO CONSTRUCTION CO.,LTD.",1890.T
+3,1,prompt1,mistral,4,25935,"Class-A Preferred Stock of ITO EN,LTD.",25935.T
+4,4,prompt4,mistral,4,25935,"Class-A Preferred Stock of ITO EN,LTD.",25935.T
+5,1,prompt1,mistral,4,2769,"Village Vanguard CO.,LTD.",2769.T
+6,1,prompt1,mistral,4,2904,"ICHIMASA KAMABOKO CO.,LTD.",2904.T
+9,1,prompt1,mistral,4,3140,"BRUNO,Inc.",3140.T
+13,1,prompt1,mistral,4,6937,"The Furukawa Battery Co.,Ltd.",6937.T
+14,4,prompt4,mistral,4,6937,"The Furukawa Battery Co.,Ltd.",6937.T
+17,2,prompt2,mistral,4,4661,"ORIENTAL LAND CO.,LTD.",4661.T
+18,2,prompt2,mistral,4,6098,"Recruit Holdings Co.,Ltd.",6098.T
+19,5,prompt5,mistral,4,6098,"Recruit Holdings Co.,Ltd.",6098.T
+20,2,prompt2,mistral,4,6501,"Hitachi,Ltd.",6501.T
+21,3,prompt3,chatgpt,2,6501,"Hitachi,Ltd.",6501.T
+22,5,prompt5,mistral,4,6501,"Hitachi,Ltd.",6501.T
+23,2,prompt2,mistral,4,6503,Mitsubishi Electric Corporation,6503.T
+24,2,prompt2,mistral,4,6701,NEC Corporation,6701.T
+25,3,prompt3,chatgpt,2,6701,NEC Corporation,6701.T
+26,2,prompt2,mistral,4,6702,Fujitsu Limited,6702.T
+27,2,prompt2,mistral,4,6758,SONY GROUP CORPORATION,6758.T
+28,3,prompt3,chatgpt,2,6758,SONY GROUP CORPORATION,6758.T
+29,5,prompt5,mistral,4,6758,SONY GROUP CORPORATION,6758.T
+30,2,prompt2,mistral,4,6857,ADVANTEST CORPORATION,6857.T
+31,5,prompt5,mistral,4,6857,ADVANTEST CORPORATION,6857.T
+32,2,prompt2,mistral,4,6861,KEYENCE CORPORATION,6861.T
+33,5,prompt5,mistral,4,6861,KEYENCE CORPORATION,6861.T
+34,2,prompt2,mistral,4,7011,"Mitsubishi Heavy Industries,Ltd.",7011.T
+35,2,prompt2,mistral,4,7741,HOYA CORPORATION,7741.T
+36,2,prompt2,mistral,4,7751,CANON INC.,7751.T
+37,2,prompt2,mistral,4,7974,"Nintendo Co.,Ltd.",7974.T
+38,5,prompt5,mistral,4,7974,"Nintendo Co.,Ltd.",7974.T
+39,2,prompt2,mistral,4,8035,Tokyo Electron Limited,8035.T
+40,5,prompt5,mistral,4,8035,Tokyo Electron Limited,8035.T
+41,2,prompt2,mistral,4,9432,"NTT,Inc.",9432.T
+42,5,prompt5,mistral,4,9432,"NTT,Inc.",9432.T
+43,2,prompt2,mistral,4,9433,KDDI CORPORATION,9433.T
+44,2,prompt2,mistral,4,9434,SoftBank Corp.,9434.T
+50,2,prompt2,mistral,4,9984,SoftBank Group Corp.,9984.T
+51,5,prompt5,mistral,4,9984,SoftBank Group Corp.,9984.T
+52,3,prompt3,chatgpt,2,1802,OBAYASHI CORPORATION,1802.T
+53,3,prompt3,chatgpt,2,2802,"Ajinomoto Co.,Inc.",2802.T
+54,5,prompt5,mistral,4,2802,"Ajinomoto Co.,Inc.",2802.T
+55,3,prompt3,chatgpt,2,3407,ASAHI KASEI CORPORATION,3407.T
+56,3,prompt3,chatgpt,2,4005,"SUMITOMO CHEMICAL COMPANY,LIMITED",4005.T
+57,3,prompt3,chatgpt,2,4502,Takeda Pharmaceutical Company Limited,4502.T
+58,3,prompt3,chatgpt,2,4503,Astellas Pharma Inc.,4503.T
+59,3,prompt3,chatgpt,2,4578,"Otsuka Holdings Co.,Ltd.",4578.T
+60,3,prompt3,chatgpt,2,4911,"Shiseido Company,Limited",4911.T
+61,3,prompt3,chatgpt,2,6301,KOMATSU LTD.,6301.T
+62,3,prompt3,chatgpt,2,6383,"DAIFUKU CO.,LTD.",6383.T
+63,3,prompt3,chatgpt,2,6645,OMRON Corporation,6645.T
+64,3,prompt3,chatgpt,2,8604,"Nomura Holdings, Inc.",8604.T
+65,4,prompt4,mistral,4,2001,NIPPN CORPORATION,2001.T
+66,4,prompt4,mistral,4,2198,IKK Holdings Inc.,2198.T
+67,4,prompt4,mistral,4,2594,KEY COFFEE INC,2594.T
+68,4,prompt4,mistral,4,2908,"FUJICCO CO.,LTD.",2908.T
+69,4,prompt4,mistral,4,3167,TOKAI Holdings Corporation,3167.T
+70,4,prompt4,mistral,4,4801,"CENTRAL SPORTS CO.,LTD.",4801.T
+72,4,prompt4,mistral,4,6073,ASANTE INCORPORATED,6073.T
+73,4,prompt4,mistral,4,7962,"KING JIM CO.,LTD.",7962.T
+74,4,prompt4,mistral,4,8008,YONDOSHI HOLDINGS INC.,8008.T
+75,4,prompt4,mistral,4,9832,"AUTOBACS SEVEN CO.,LTD.",9832.T
+76,5,prompt5,mistral,4,2502,"Asahi Group Holdings,Ltd.",2502.T
+77,5,prompt5,mistral,4,2503,"Kirin Holdings Company,Limited",2503.T
+78,5,prompt5,mistral,4,2587,Suntory Beverage & Food Limited,2587.T
+79,5,prompt5,mistral,4,2914,JAPAN TOBACCO INC.,2914.T
+80,5,prompt5,mistral,4,3382,"Seven & i Holdings Co.,Ltd.",3382.T
+81,5,prompt5,mistral,4,5108,BRIDGESTONE CORPORATION,5108.T
+82,5,prompt5,mistral,4,6201,TOYOTA INDUSTRIES CORPORATION,6201.T
+83,5,prompt5,mistral,4,6902,DENSO CORPORATION,6902.T
+84,5,prompt5,mistral,4,7203,TOYOTA MOTOR CORPORATION,7203.T
+85,5,prompt5,mistral,4,7267,"HONDA MOTOR CO.,LTD.",7267.T
+86,5,prompt5,mistral,4,7532,Pan Pacific International Holdings Corporation,7532.T
+87,5,prompt5,mistral,4,7550,"ZENSHO HOLDINGS CO.,LTD.",7550.T
+88,5,prompt5,mistral,4,8267,"AEON CO.,LTD.",8267.T
+89,5,prompt5,mistral,4,9983,"FAST RETAILING CO.,LTD.",9983.T
