@@ -44,7 +44,8 @@ def load_and_merge_prices(
 		df = pd.read_csv(file_path, header=[0,1], index_col=0)
 		df.columns = df.columns.get_level_values(1)
 		df.index = pd.to_datetime(df.index)
-		df.ffill(inplace=True)
+		df.dropna(axis=0, inplace=True)
+		
 		if kwargs:
 			df = df.resample(kwargs['timeframe']).agg({'ACVOL_UNS':'sum',
 													   'BID_HIGH_1':'max',
@@ -60,9 +61,8 @@ def load_and_merge_prices(
 													   'MID_OPEN':'first',
 													   'MID_PRICE':'last'})
 			
-			df = df.between_time("00:00", "06:30")
-			df.dropna(axis=0, inplace=True)
-			
+		df = df.between_time("00:00", "06:30")
+		df.ffill(inplace=True)			
 		df.reset_index(drop=False, inplace=True)
 		df["Local Code"] = code
 		dfs.append(df)
