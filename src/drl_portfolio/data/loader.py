@@ -33,9 +33,14 @@ def load_and_merge_prices(
 	DataFrame
 		MultiIndex (Timestamp, Local Code) with all original columns.
 	"""
+	
+	assets_df = assets_df.copy()
+	assets_df["Local Code"] = assets_df["Local Code"].apply(lambda x: str(int(x)))
+	
 	dfs = []
+	start_date = pd.Timestamp("2024-06-01")
 	for _, row in assets_df.iterrows():
-		code = str(int(row["Local Code"]))
+		code = row["Local Code"]
 		file_path = raw_data_dir / f"{code}.T.csv"
 		if not file_path.exists():
 			print(f"[WARN] Missing price file for {code}: {file_path}")
@@ -44,8 +49,9 @@ def load_and_merge_prices(
 		df = pd.read_csv(file_path, header=[0,1], index_col=0)
 		df.columns = df.columns.get_level_values(1)
 		df.index = pd.to_datetime(df.index)
-		df.dropna(axis=0, inplace=True)
-		
+		df = df.loc[df.index >= start_date]
+		df.ffill(inplace=True)
+
 		if kwargs:
 			df = df.resample(kwargs['timeframe']).agg({'ACVOL_UNS':'sum',
 													   'BID_HIGH_1':'max',
@@ -61,11 +67,13 @@ def load_and_merge_prices(
 													   'MID_OPEN':'first',
 													   'MID_PRICE':'last'})
 			
-		df = df.between_time("00:00", "06:30")
-		df.ffill(inplace=True)			
+			df = df.between_time("00:00", "06:30")
+			df.dropna(axis=0, inplace=True)	
+			
 		df.reset_index(drop=False, inplace=True)
 		df["Local Code"] = code
 		dfs.append(df)
+		print(df)
 
 	if not dfs:
 		raise ValueError("No price files loaded. Check data/raw/<LocalCode>.T.csv files.")
