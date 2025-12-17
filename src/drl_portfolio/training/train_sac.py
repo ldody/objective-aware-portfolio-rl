@@ -183,14 +183,52 @@ def run_full_experiment(
 	train_norm, test_norm, _ = normalize_features(train_feat, test_feat)
 	
 	"""debug"""
-	print("assets Local Code dtype:", assets_df["Local Code"].dtype)
+	# ---------------- FIX ALIGNMENT BEFORE ENV ----------------
+	# 1) Normalize asset codes
+	assets_df = assets_df.copy()
+	assets_df["Local Code"] = (
+		assets_df["Local Code"].astype(str).str.strip().str.replace(".0", "", regex=False)
+	)
+
+	# 2) Ensure MultiIndex order is (Timestamp, Local Code)
+	train_norm = train_norm.reorder_levels(["Timestamp", "Local Code"]).sort_index()
+	test_norm  = test_norm.reorder_levels(["Timestamp", "Local Code"]).sort_index()
+	train_ret  = train_ret.reorder_levels(["Timestamp", "Local Code"]).sort_index()
+	test_ret   = test_ret.reorder_levels(["Timestamp", "Local Code"]).sort_index()
+
+	# 3) Normalize Local Code in the MultiIndex levels (features/returns)
+	def _norm_index(mi: pd.MultiIndex) -> pd.MultiIndex:
+		ts = mi.get_level_values("Timestamp")
+		codes = (
+			mi.get_level_values("Local Code")
+			.astype(str).str.strip().str.replace(".0", "", regex=False)
+		)
+		return pd.MultiIndex.from_arrays([ts, codes], names=["Timestamp", "Local Code"])
+
+	train_norm.index = _norm_index(train_norm.index)
+	test_norm.index  = _norm_index(test_norm.index)
+	train_ret.index  = _norm_index(train_ret.index)
+	test_ret.index   = _norm_index(test_ret.index)
+
+	train_norm = train_norm.sort_index()
+	test_norm  = test_norm.sort_index()
+	train_ret  = train_ret.sort_index()
+	test_ret   = test_ret.sort_index()
+
+	# 4) Quick sanity key test (should print True True)
+	ts0 = train_norm.index.get_level_values("Timestamp")[0]
+	code0 = str(assets_df["Local Code"].iloc[0])
+	print("SANITY key:", (ts0, code0),
+		  "in train_norm?", (ts0, code0) in train_norm.index,
+		  "in train_ret?", (ts0, code0) in train_ret.index)
+	# ----------------------------------------------------------
+
 	print("assets codes sample:", assets_df["Local Code"].head(10).tolist())
-
-	print("features index names:", features.index.names)
-	print("returns  index names:", returns.index.names)
-
-	print("features Timestamp sample:", features.index.get_level_values(0)[:3].tolist())
-	print("returns  Timestamp sample:", returns.index.get_level_values(0)[:3].tolist())
+	print("train_norm index names:", train_norm.index.names)
+	print("train_ret  index names:", train_ret.index.names)
+	print("train_norm Timestamp sample:", train_norm.index.get_level_values("Timestamp")[:3].tolist())
+	print("train_ret  Timestamp sample:", train_ret.index.get_level_values("Timestamp")[:3].tolist())
+	print("train_norm Local Code sample:", train_norm.index.get_level_values("Local Code").unique()[:5].tolist())
 
 
 	print("Building environments...")
