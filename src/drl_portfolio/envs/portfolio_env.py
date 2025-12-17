@@ -82,6 +82,28 @@ class PortfolioEnv(gym.Env):
 		self._build_arrays()
 		self._build_day_indices()
 		self.reset(seed=None)
+		
+		
+		"""debug"""
+		print("T steps:", len(self.timestamps), "N assets:", self.n_assets)
+		print("feat std:", self.feat_arr.std())
+		print("ret_mid std:", self.ret_mid_arr.std())
+		print("ret_exec std:", self.ret_exec_arr.std())
+		print("feat nonzero %:", (self.feat_arr != 0).mean())
+		print("ret_mid nonzero %:", (self.ret_mid_arr != 0).mean())
+		
+		if (self.ret_mid_arr != 0).mean() < 0.01:
+			raise ValueError(
+				"ret_mid_arr is ~all zeros. "
+				"Mismatch between env (Timestamp, Local Code) and returns index."
+			)
+
+		if self.feat_arr.std() < 1e-12:
+			raise ValueError(
+				"feat_arr is constant. "
+				"Features not being found or incorrectly aligned."
+			)
+
 
 	def _build_day_indices(self) -> None:
 		"""Pré-calcul des indices de début/fin pour chaque journée."""

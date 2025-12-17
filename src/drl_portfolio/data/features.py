@@ -160,6 +160,11 @@ def engineer_features_and_returns(
 
 	# target: execution log-returns (same as before)
 	return_df = df[["log_return_exec", "log_return_mid"]].copy()
+	
+	# Ensure correct MultiIndex order
+	feature_df = feature_df.reorder_levels(["Timestamp", "Local Code"]).sort_index()
+	return_df  = return_df.reorder_levels(["Timestamp", "Local Code"]).sort_index()
+
 
 	return feature_df, return_df
 
