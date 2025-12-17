@@ -38,7 +38,7 @@ def load_and_merge_prices(
 	assets_df["Local Code"] = assets_df["Local Code"].apply(lambda x: str(int(x)))
 	
 	dfs = []
-	start_date = pd.Timestamp("2024-09-01")
+	start_date = pd.Timestamp("2025-06-01")
 	for _, row in assets_df.iterrows():
 		code = row["Local Code"]
 		file_path = raw_data_dir / f"{code}.T.csv"
