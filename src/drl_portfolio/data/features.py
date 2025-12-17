@@ -163,6 +163,17 @@ def engineer_features_and_returns(
 	
 	# Ensure correct MultiIndex order
 	print('features', feature_df, 'return', return_df)
+	
+	in_codes = set(panel_df.index.get_level_values("Local Code").unique())
+	out_codes = set(feature_df.index.get_level_values("Local Code").unique())
+	print("Codes IN panel:", sorted(in_codes))
+	print("Codes OUT features:", sorted(out_codes))
+	print("Dropped codes:", sorted(in_codes - out_codes))
+	
+	if "1890" in in_codes:
+		print("Rows for 1890 in panel:", panel_df.xs("1890", level="Local Code").shape[0])
+		print("Rows for 1890 in features:", feature_df.xs("1890", level="Local Code").shape[0] if "1890" in out_codes else 0)
+		print("Rows for 1890 in returns:", return_df.xs("1890", level="Local Code").shape[0] if "1890" in out_codes else 0)
 
 
 	return feature_df, return_df
