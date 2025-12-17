@@ -185,18 +185,18 @@ def train_test_split_time_based(
 	train_ratio: float = 0.7,
 ):
 	"""Time-based train/test split on the Timestamp level."""
-	timestamps = feature_df.index.get_level_values("Timestamp").unique()
-	split_idx = int(len(timestamps) * train_ratio)
-	train_ts = timestamps[:split_idx]
-	test_ts = timestamps[split_idx:]
+	timestamps = feature_df.index.get_level_values("Timestamp")
+	unique_ts = timestamps.unique().sort_values()
 
-	def _mask(ts_set):
-		return feature_df.index.get_level_values("Timestamp").isin(ts_set)
+	cutoff = unique_ts[int(len(unique_ts) * train_ratio)]
 
-	train_feat = feature_df.loc[_mask(train_ts)]
-	test_feat = feature_df.loc[_mask(test_ts)]
-	train_ret = return_df.loc[_mask(train_ts)]
-	test_ret = return_df.loc[_mask(test_ts)]
+	train_mask = timestamps <= cutoff
+	test_mask  = timestamps > cutoff
+
+	train_feat = feature_df.loc[train_mask]
+	test_feat  = feature_df.loc[test_mask]
+	train_ret  = return_df.loc[train_mask]
+	test_ret   = return_df.loc[test_mask]
 	return train_feat, test_feat, train_ret, test_ret
 
 
