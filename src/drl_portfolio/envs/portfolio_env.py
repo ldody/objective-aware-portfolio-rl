@@ -85,6 +85,17 @@ class PortfolioEnv(gym.Env):
 		
 		
 		"""debug"""
+		print("ENV features type:", type(self.features), "index type:", type(getattr(self.features, "index", None)))
+		print("ENV returns   type:", type(self.returns),   "index type:", type(getattr(self.returns, "index", None)))
+		print("ENV features index names:", getattr(self.features.index, "names", None))
+		print("ENV returns   index names:", getattr(self.returns.index, "names", None))
+
+		# show first index entries (this is the killer check)
+		print("ENV features first index:", self.features.index[0] if hasattr(self.features, "index") else None)
+		print("ENV returns   first index:", self.returns.index[0] if hasattr(self.returns, "index") else None)
+
+        
+        
 		print("T steps:", len(self.timestamps), "N assets:", self.n_assets)
 		print("feat std:", self.feat_arr.std())
 		print("ret_mid std:", self.ret_mid_arr.std())
