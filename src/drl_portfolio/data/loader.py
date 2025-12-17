@@ -53,6 +53,8 @@ def load_and_merge_prices(
 		df.ffill(inplace=True)
 
 		if kwargs:
+			df = df.between_time("00:00", "06:30")
+			
 			df = df.resample(kwargs['timeframe']).agg({'ACVOL_UNS':'sum',
 													   'BID_HIGH_1':'max',
 													   'BID_LOW_1':'min',
@@ -67,13 +69,14 @@ def load_and_merge_prices(
 													   'MID_OPEN':'first',
 													   'MID_PRICE':'last'})
 			
-			df = df.between_time("00:00", "06:30")
-			df.dropna(axis=0, inplace=True)	
+			print("NaN rows after resample:", df[["BID","ASK","MID_PRICE"]].isna().all(axis=1).mean())
+			
+			price_cols = ["BID","ASK","MID_PRICE","MID_HIGH","MID_LOW","MID_OPEN"]
+			df = df.dropna(how="all", subset=price_cols)
 			
 		df.reset_index(drop=False, inplace=True)
 		df["Local Code"] = code
 		dfs.append(df)
-		print(df)
 
 	if not dfs:
 		raise ValueError("No price files loaded. Check data/raw/<LocalCode>.T.csv files.")
