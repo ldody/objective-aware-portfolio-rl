@@ -69,10 +69,19 @@ def load_and_merge_prices(
 													   'MID_OPEN':'first',
 													   'MID_PRICE':'last'})
 			
-			print("NaN rows after resample:", df[["BID","ASK","MID_PRICE"]].isna().all(axis=1).mean())
-			
-			price_cols = ["BID","ASK","MID_PRICE","MID_HIGH","MID_LOW","MID_OPEN"]
-			df = df.dropna(how="all", subset=price_cols)
+			# fill gaps created by resampling
+			df = df.ffill()
+
+			print(
+				"NaN rows after resample:",
+				df[["BID", "ASK", "MID_PRICE"]].isna().all(axis=1).mean()
+			)
+
+			# drop only truly empty bars
+			df = df.dropna(how="all", subset=["BID", "ASK", "MID_PRICE"])
+
+			# (optional but often good) if a bar has any of these missing, you cannot compute returns safely:
+			df = df.dropna(subset=["BID", "ASK", "MID_PRICE"])
 			
 		df.reset_index(drop=False, inplace=True)
 		df["Local Code"] = code
@@ -82,6 +91,7 @@ def load_and_merge_prices(
 		raise ValueError("No price files loaded. Check data/raw/<LocalCode>.T.csv files.")
 	
 	data = pd.concat(dfs, ignore_index=True)
+	print("Codes in final panel:", sorted(data.index.get_level_values("Local Code").unique()))
 	data.set_index(["Timestamp", "Local Code"], inplace=True)
 	data.sort_index(inplace=True)
 	return data
