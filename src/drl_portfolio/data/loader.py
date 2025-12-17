@@ -91,7 +91,7 @@ def load_and_merge_prices(
 		raise ValueError("No price files loaded. Check data/raw/<LocalCode>.T.csv files.")
 	
 	data = pd.concat(dfs, ignore_index=True)
-	print("Codes in final panel:", sorted(data.index.get_level_values("Local Code").unique()))
 	data.set_index(["Timestamp", "Local Code"], inplace=True)
 	data.sort_index(inplace=True)
+	print("Codes in final panel:", sorted(data.index.get_level_values("Local Code").unique()))
 	return data
