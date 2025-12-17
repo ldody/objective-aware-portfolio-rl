@@ -140,17 +140,25 @@ class PortfolioEnv(gym.Env):
 		feat_arr = np.zeros((T, self.n_assets, self.n_features), dtype=np.float32)
 		ret_exec_arr = np.zeros((T, self.n_assets), dtype=np.float32)
 		ret_mid_arr = np.zeros((T, self.n_assets), dtype=np.float32)
-
+		
+		hits_ret = 0
+		hits_feat = 0
+		
 		for t_idx, ts in enumerate(self.timestamps):
 			for a_idx, code in enumerate(self.asset_codes):
 				idx = (ts, code)
 				if idx in self.features.index:
 					feat_arr[t_idx, a_idx, :] = self.features.loc[idx].values
+					hits_ret += 1
 				if idx in self.returns.index:
 					row = self.returns.loc[idx]
 					# assumes columns ["log_return_exec","log_return_mid"]
 					ret_exec_arr[t_idx, a_idx] = float(row["log_return_exec"])
 					ret_mid_arr[t_idx, a_idx] = float(row["log_return_mid"])
+					hits_ret += 1
+					
+		print("hits_ret:", hits_ret, "hits_feat:", hits_feat,
+			  "total:", len(self.timestamps) * len(self.asset_codes))
 
 		self.feat_arr = feat_arr
 		self.ret_exec_arr = ret_exec_arr
