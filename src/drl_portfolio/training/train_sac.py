@@ -181,6 +181,17 @@ def run_full_experiment(
 
 	print("Normalizing features...")
 	train_norm, test_norm, _ = normalize_features(train_feat, test_feat)
+	
+	"""debug"""
+	print("assets Local Code dtype:", assets_df["Local Code"].dtype)
+	print("assets codes sample:", assets_df["Local Code"].head(10).tolist())
+
+	print("features index names:", features.index.names)
+	print("returns  index names:", returns.index.names)
+
+	print("features Timestamp sample:", features.index.get_level_values(0)[:3].tolist())
+	print("returns  Timestamp sample:", returns.index.get_level_values(0)[:3].tolist())
+
 
 	print("Building environments...")
 
