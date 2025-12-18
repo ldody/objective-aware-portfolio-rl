@@ -9,7 +9,7 @@
 #SBATCH --output=DRL_%a.out #/dev/null
 #SBATCH --job-name=DRL_%a
 #SBATCH --partition=c6420-ib100
-#SBATCH --array=14-24%5
+#SBATCH --array=0-24%5
 
 
 module purge
