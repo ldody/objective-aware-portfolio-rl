@@ -86,6 +86,7 @@ def load_and_merge_prices(
 		df.reset_index(drop=False, inplace=True)
 		df["Local Code"] = code
 		dfs.append(df)
+		print(df)
 
 	if not dfs:
 		raise ValueError("No price files loaded. Check data/raw/<LocalCode>.T.csv files.")
