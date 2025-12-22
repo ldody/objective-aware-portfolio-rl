@@ -334,7 +334,8 @@ def run_full_experiment(
 	# En mode "test", ces envs parcourent toute la période
 	bt_eq = backtest_equal_weight(test_env_nc)  # equal-weight sans contraintes
 	bt_mv = backtest_mean_variance(test_env_nc)
-
+	
+	"""
 	res_sac = summarize_strategy("SAC constrained", bt_sac)
 	res_sac_base = summarize_strategy("SAC baseline", bt_sac_base)
 	res_eq = summarize_strategy("Equal-weight", bt_eq)
@@ -346,7 +347,8 @@ def run_full_experiment(
 		"Equal_weight": res_eq,
 		"Mean_variance": res_mv,
 	}
-
+	"""
+	
 	results_dir.mkdir(exist_ok=True)
 
 	# Equal-weight
