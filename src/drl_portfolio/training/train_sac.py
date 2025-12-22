@@ -306,7 +306,7 @@ def run_full_experiment(
 
 	filename_ext = [str(v) for v in kwargs.values()]
 
-	if results_dir / f"alloc_sac_constrained_{'_'.join(filename_ext)}.csv" in os.listdir(results_dir):
+	if (results_dir / f"alloc_sac_constrained_{'_'.join(filename_ext)}.csv").exist():
 		print("\nTraining SAC (constraint-aware) already done")
 		
 	else:
@@ -318,7 +318,7 @@ def run_full_experiment(
 		bt_sac["performance"].to_csv(results_dir / f"perf_sac_constrained_{'_'.join(filename_ext)}.csv")
 		# sac_agent = train_sac_on_env(train_env, cfg)
 
-	if results_dir / f"alloc_sac_baseline_{'_'.join(filename_ext)}.csv" in os.listdir(results_dir):
+	if (results_dir / f"alloc_sac_baseline_{'_'.join(filename_ext)}.csv").exist():
 		print("\nTraining SAC baseline (no constraints) already done")
 		
 	else:
