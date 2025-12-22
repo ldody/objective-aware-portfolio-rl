@@ -303,18 +303,28 @@ def run_full_experiment(
 		mode="test",           # <--- TRES IMPORTANT
 	)
 
-	print("\nTraining SAC (constraint-aware)...")
-	sac_agent = train_sac_on_vec_env(train_vec_env, cfg)
-	# sac_agent = train_sac_on_env(train_env, cfg)
+	filename_ext = [str(v) for v in kwargs.values()]
 
-	print("\nTraining SAC baseline (no constraints)...")
-	sac_agent_base = train_sac_on_vec_env(train_vec_env_nc, cfg)
-	# sac_agent_base = train_sac_on_env(train_env_nc, cfg)
+	if results_dir / f"alloc_sac_constrained_{'_'.join(filename_ext)}.csv" in os.listdir(results_dir):
+		print("\nTraining SAC (constraint-aware) already done")
+		
+	else:
+		print("\nTraining SAC (constraint-aware)...")
+		sac_agent = train_sac_on_vec_env(train_vec_env, cfg)
+		bt_sac = backtest_policy(test_env, sac_agent, deterministic=True)
+		# sac_agent = train_sac_on_env(train_env, cfg)
+
+	if results_dir / f"alloc_sac_baseline_{'_'.join(filename_ext)}.csv" in os.listdir(results_dir):
+		print("\nTraining SAC baseline (no constraints) already done")
+		
+	else:
+		print("\nTraining SAC baseline (no constraints)...")
+		sac_agent_base = train_sac_on_vec_env(train_vec_env_nc, cfg)
+		bt_sac_base = backtest_policy(test_env_nc, sac_agent_base, deterministic=True)
+		# sac_agent_base = train_sac_on_env(train_env_nc, cfg)
 
 	print("\nBacktesting (bid/ask-based returns)...")
 	# En mode "test", ces envs parcourent toute la période
-	bt_sac = backtest_policy(test_env, sac_agent, deterministic=True)
-	bt_sac_base = backtest_policy(test_env_nc, sac_agent_base, deterministic=True)
 	bt_eq = backtest_equal_weight(test_env_nc)  # equal-weight sans contraintes
 	bt_mv = backtest_mean_variance(test_env_nc)
 
@@ -331,8 +341,6 @@ def run_full_experiment(
 	}
 
 	results_dir.mkdir(exist_ok=True)
-	
-	filename_ext = [str(v) for v in kwargs.values()]
 	
 	# DRL constrained
 	bt_sac["allocation"].to_csv(results_dir / f"alloc_sac_constrained_{'_'.join(filename_ext)}.csv")
