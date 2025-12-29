@@ -255,7 +255,7 @@ def run_full_experiment(
 		days_per_episode=num_day_per_ep,
 	)
 
-	num_envs = 4
+	num_envs = 8
 	train_vec_env = VectorPortfolioEnv(
 		[
 			PortfolioEnv(
