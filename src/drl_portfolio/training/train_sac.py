@@ -332,8 +332,9 @@ def run_full_experiment(
 
 	print("\nBacktesting (bid/ask-based returns)...")
 	# En mode "test", ces envs parcourent toute la période
-	bt_eq = backtest_equal_weight(test_env_nc)  # equal-weight sans contraintes
-	bt_mv = backtest_mean_variance(test_env_nc)
+	#bt_eq = backtest_equal_weight(test_env_nc)  # equal-weight sans contraintes
+	print(params_df)
+	bt_mv = backtest_mean_variance(test_env_nc, turnover_cap=params_df.loc[params_df['Parameters'] == 'Turnover','Value'].values)
 	
 	"""
 	res_sac = summarize_strategy("SAC constrained", bt_sac)
@@ -352,8 +353,8 @@ def run_full_experiment(
 	results_dir.mkdir(exist_ok=True)
 
 	# Equal-weight
-	bt_eq["allocation"].to_csv(results_dir / f"alloc_equal_weight_{'_'.join(filename_ext)}.csv")
-	bt_eq["performance"].to_csv(results_dir / f"perf_equal_weight_{'_'.join(filename_ext)}.csv")
+	#bt_eq["allocation"].to_csv(results_dir / f"alloc_equal_weight_{'_'.join(filename_ext)}.csv")
+	#bt_eq["performance"].to_csv(results_dir / f"perf_equal_weight_{'_'.join(filename_ext)}.csv")
 
 	# Mean-variance
 	bt_mv["allocation"].to_csv(results_dir / f"alloc_mean_variance_{'_'.join(filename_ext)}.csv")

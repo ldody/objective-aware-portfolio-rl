@@ -203,17 +203,20 @@ def mean_variance_weights(ret_matrix: np.ndarray, eps: float = 1e-6) -> np.ndarr
 	mu = ret_matrix.mean(axis=0)  # [N]
 	Sigma = np.cov(ret_matrix, rowvar=False) + eps * np.eye(ret_matrix.shape[1])
 	inv_Sigma = np.linalg.pinv(Sigma)
+
 	w = inv_Sigma @ mu
 	w = np.maximum(w, 0.0)
-	s = w.sum()
-	if s == 0.0:
-		w = np.ones_like(w) / len(w)
+
+	s = float(w.sum())
+	if s <= 0.0 or not np.isfinite(s):
+		w = np.ones_like(w, dtype=np.float64) / max(len(w), 1)
 	else:
 		w = w / s
+
 	return w.astype(np.float32)
 
 
-def backtest_mean_variance(env: PortfolioEnv, window_steps: int = 96) -> Dict:
+def backtest_mean_variance(env: PortfolioEnv, window_steps: int = 96, turnover_cap: float = None) -> Dict:
 	"""
 	Mean-variance benchmark that uses the environment's price data directly
 	(without calling env.step) but reproduces the same mid/exec/spread/fee
@@ -223,7 +226,95 @@ def backtest_mean_variance(env: PortfolioEnv, window_steps: int = 96) -> Dict:
 	  - ret_mid_arr: mid-price log returns
 	  - ret_exec_arr: exec-price log returns (includes spread)
 	  - trading_cost: env.trading_cost * turnover, with turnover from MV weights.
+
+	New:
+	  - turnover_cap (hard cap), applied ONLY to risky assets (all except last column).
+	    CASH is last asset and is adjusted to keep sum(w)=1.
+	    Constraint: sum(|w_risky_new - w_risky_prev|) <= turnover_cap
 	"""
+
+	def _apply_turnover_cap_risky_only(w_target: np.ndarray, w_prev: np.ndarray, cap: float) -> np.ndarray:
+		"""
+		Apply hard turnover cap to risky sleeve only (w[:-1]).
+		Then set CASH (last weight) = 1 - sum(risky), clipped at 0, and renormalize
+		risky if needed so that CASH stays >= 0 and sum(w)=1.
+
+		This keeps long-only and sum-to-1, and ensures risky turnover <= cap.
+		"""
+		w_target = np.asarray(w_target, dtype=np.float64)
+		w_prev = np.asarray(w_prev, dtype=np.float64)
+
+		n = w_target.size
+		if n < 2:
+			return w_target.astype(np.float32)
+
+		# If no/invalid cap -> just clean & enforce cash-last structure
+		if cap is None:
+			risky = np.clip(w_target[:-1], 0.0, np.inf)
+			sr = float(risky.sum())
+			cash = 1.0 - sr
+			if cash < 0.0:
+				# scale down risky to make room for non-negative cash
+				if sr > 0:
+					risky = risky / sr
+					sr = 1.0
+				cash = 0.0
+			w_new = np.empty_like(w_target)
+			w_new[:-1] = risky
+			w_new[-1] = cash
+			# (Optional) tiny numerical fix
+			total = float(w_new.sum())
+			if total > 0:
+				w_new /= total
+			return w_new.astype(np.float32)
+
+		cap = float(cap)
+		if (not np.isfinite(cap)) or cap < 0.0:
+			# treat invalid as unconstrained
+			return _apply_turnover_cap_risky_only(w_target, w_prev, None)
+
+		# Work on risky sleeve only
+		rt = np.clip(w_target[:-1], 0.0, np.inf)
+		rp = np.clip(w_prev[:-1], 0.0, np.inf)
+
+		# Ensure prev risky is feasible with cash>=0 (should already be)
+		srp = float(rp.sum())
+		if srp > 1.0 + 1e-12:
+			rp = rp / srp
+			srp = 1.0
+
+		# Turnover on risky only
+		to = float(np.sum(np.abs(rt - rp)))
+		if (not np.isfinite(to)) or to <= 1e-12 or to <= cap:
+			risky_new = rt
+		else:
+			alpha = cap / to  # (0,1)
+			risky_new = rp + alpha * (rt - rp)
+
+		# Enforce non-neg
+		risky_new = np.clip(risky_new, 0.0, np.inf)
+
+		# Set cash to keep sum=1 and cash>=0
+		sr = float(risky_new.sum())
+		cash = 1.0 - sr
+		if cash < 0.0:
+			# scale down risky to fit
+			if sr > 0.0:
+				risky_new = risky_new / sr
+				sr = 1.0
+			cash = 0.0
+
+		w_new = np.empty(n, dtype=np.float64)
+		w_new[:-1] = risky_new
+		w_new[-1] = cash
+
+		# Final numerical normalization (should already sum ~1)
+		total = float(w_new.sum())
+		if total > 0 and abs(total - 1.0) > 1e-10:
+			w_new /= total
+
+		return w_new.astype(np.float32)
+
 	# Arrays: [T, N]
 	ret_mid = env.ret_mid_arr
 	ret_exec = env.ret_exec_arr
@@ -247,14 +338,17 @@ def backtest_mean_variance(env: PortfolioEnv, window_steps: int = 96) -> Dict:
 	prev_w = np.ones(n_assets, dtype=np.float32) / n_assets
 
 	for t in range(start_idx, T):
+		is_rebal = ((t - start_idx) % window_steps == 0)
+
 		# 1) Recompute MV weights every 'window_steps' steps
-		if (t - start_idx) % window_steps == 0:
+		if is_rebal:
 			start_win = max(env.window, t - window_steps)
 			R_win = ret_mid[start_win:t, :]
 			if R_win.shape[0] < 2:
 				w = prev_w
 			else:
-				w = mean_variance_weights(R_win)
+				w_target = mean_variance_weights(R_win)
+				w = _apply_turnover_cap_risky_only(w_target, prev_w, turnover_cap)
 		else:
 			w = prev_w
 
@@ -271,7 +365,8 @@ def backtest_mean_variance(env: PortfolioEnv, window_steps: int = 96) -> Dict:
 		spread_cost = step_return_mid - step_return_exec
 
 		# 3) Turnover and fee
-		turnover = float(np.sum(np.abs(w - prev_w)))
+		# IMPORTANT: turnover computed on risky only (since cap applies to risky only)
+		turnover = float(np.sum(np.abs(w[:-1] - prev_w[:-1])))
 		fee_cost = trading_cost_per_unit * turnover
 
 		# 4) Net return and equity
@@ -302,6 +397,7 @@ def backtest_mean_variance(env: PortfolioEnv, window_steps: int = 96) -> Dict:
 		turnover_hist,
 		ts_hist,
 	)
+
 
 
 def summarize_strategy(name: str, bt_result: Dict) -> Dict[str, float]:
