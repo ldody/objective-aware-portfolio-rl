@@ -334,7 +334,7 @@ def run_full_experiment(
 	# En mode "test", ces envs parcourent toute la période
 	#bt_eq = backtest_equal_weight(test_env_nc)  # equal-weight sans contraintes
 	print(params_df)
-	bt_mv = backtest_mean_variance(test_env_nc, turnover_cap=params_df.loc[params_df['Parameters'] == 'Turnover','Value'].values)
+	bt_mv = backtest_mean_variance(test_env_nc, turnover_cap=params_df.loc['Turnover','Value'].values)
 	
 	"""
 	res_sac = summarize_strategy("SAC constrained", bt_sac)
