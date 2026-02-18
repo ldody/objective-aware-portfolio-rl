@@ -191,138 +191,208 @@ def backtest_equal_weight(env: PortfolioEnv) -> Dict:
 	)
 
 
-def mean_variance_weights(ret_matrix: np.ndarray, eps: float = 1e-6) -> np.ndarray:
+def project_simplex_with_bounds(v: np.ndarray, ub: np.ndarray, tol: float = 1e-12, max_iter: int = 200) -> np.ndarray:
 	"""
-	Simple long-only mean-variance weights with identity regularization.
-	Input:
-		ret_matrix: [T, N] matrix of asset returns (log or arithmetic).
+	Projection: min ||w - v||^2 s.c. 0<=w<=ub and sum(w)=1
 	"""
-	if ret_matrix.ndim != 2 or ret_matrix.shape[0] < 2:
-		raise ValueError("ret_matrix must be 2D with at least 2 time steps")
+	v = np.asarray(v, dtype=np.float64)
+	ub = np.asarray(ub, dtype=np.float64)
 
-	mu = ret_matrix.mean(axis=0)  # [N]
-	Sigma = np.cov(ret_matrix, rowvar=False) + eps * np.eye(ret_matrix.shape[1])
+	if ub.sum() < 1.0 - 1e-12:
+		# infeasible -> fallback no leverage
+		w = ub / max(ub.sum(), 1e-12)
+		return w
+
+	lo, hi = -1e6, 1e6
+	for _ in range(max_iter):
+		lam = 0.5 * (lo + hi)
+		w = np.clip(v - lam, 0.0, ub)
+		s = float(w.sum())
+		if abs(s - 1.0) < tol:
+			return w
+		if s > 1.0:
+			lo = lam
+		else:
+			hi = lam
+
+	lam = 0.5 * (lo + hi)
+	return np.clip(v - lam, 0.0, ub)
+
+
+def mv_direction_risky_only(ret_matrix_risky: np.ndarray, ub_risky: np.ndarray, eps: float = 1e-6) -> np.ndarray:
+	"""
+	Mean-variance direction on risky sleeve only, then project to:
+	- long-only
+	- sum(w_risky)=1
+	- w_risky <= ub_risky
+	"""
+	R = np.asarray(ret_matrix_risky, dtype=np.float64)
+	if R.ndim != 2 or R.shape[0] < 2:
+		# fallback equal weights
+		w0 = np.ones(R.shape[1], dtype=np.float64) / max(R.shape[1], 1)
+		return project_simplex_with_bounds(w0, ub_risky)
+
+	# robustify NaNs
+	R = np.where(np.isfinite(R), R, np.nan)
+	col_ok = np.nanmean(np.isfinite(R), axis=0) > 0.9
+	if not np.all(col_ok):
+		R[:, ~col_ok] = 0.0
+
+	mu = np.nanmean(R, axis=0)  # [N_risky]
+	X = R - mu
+	X = np.where(np.isfinite(X), X, 0.0)
+
+	T = R.shape[0]
+	Sigma = (X.T @ X) / (T - 1) + eps * np.eye(R.shape[1])
 	inv_Sigma = np.linalg.pinv(Sigma)
 
-	w = inv_Sigma @ mu
-	w = np.maximum(w, 0.0)
+	w_raw = inv_Sigma @ mu
+	# project to long-only simplex with bounds (sum=1 on risky sleeve)
+	w_dir = project_simplex_with_bounds(w_raw, ub_risky)
+	return w_dir
 
-	s = float(w.sum())
-	if s <= 0.0 or not np.isfinite(s):
-		w = np.ones_like(w, dtype=np.float64) / max(len(w), 1)
+
+def ex_ante_mu_sigma_bar(ret_matrix_risky: np.ndarray, w_risky: np.ndarray, eps: float = 1e-6) -> tuple[float, float]:
+	"""
+	Estimate ex-ante mean and vol per BAR for risky portfolio w_risky.
+	"""
+	R = np.asarray(ret_matrix_risky, dtype=np.float64)
+	w = np.asarray(w_risky, dtype=np.float64)
+
+	mu = np.nanmean(R, axis=0)
+	X = R - mu
+	X = np.where(np.isfinite(X), X, 0.0)
+
+	T = R.shape[0]
+	if T < 2:
+		return float(mu @ w), 0.0
+
+	Sigma = (X.T @ X) / (T - 1) + eps * np.eye(R.shape[1])
+	mu_p = float(mu @ w)
+	sig_p = float(np.sqrt(max(0.0, w @ Sigma @ w)))
+	return mu_p, sig_p
+
+
+def apply_turnover_cap_risky_only(
+	w_target: np.ndarray,
+	w_prev: np.ndarray,
+	cap_step: Optional[float],
+	cap_day_remaining: Optional[float],
+) -> tuple[np.ndarray, float]:
+	"""
+	Apply hard turnover cap on risky sleeve only: sum(|w_risky_new - w_risky_prev|) <= cap_eff
+	where cap_eff = min(cap_step, cap_day_remaining) if provided.
+
+	Returns (w_new, turnover_risky_effective)
+	"""
+	w_target = np.asarray(w_target, dtype=np.float64)
+	w_prev = np.asarray(w_prev, dtype=np.float64)
+
+	n = w_target.size
+	if n < 2:
+		return w_target.astype(np.float32), 0.0
+
+	# risky sleeves
+	rt = np.clip(w_target[:-1], 0.0, np.inf)
+	rp = np.clip(w_prev[:-1], 0.0, np.inf)
+
+	# effective cap
+	caps = []
+	if cap_step is not None and np.isfinite(cap_step) and cap_step >= 0:
+		caps.append(float(cap_step))
+	if cap_day_remaining is not None and np.isfinite(cap_day_remaining) and cap_day_remaining >= 0:
+		caps.append(float(cap_day_remaining))
+	cap_eff = min(caps) if len(caps) > 0 else None
+
+	if cap_eff is None:
+		risky_new = rt
+		to_eff = float(np.sum(np.abs(risky_new - rp)))
 	else:
-		w = w / s
-
-	return w.astype(np.float32)
-
-
-def backtest_mean_variance(env: PortfolioEnv, window_steps: int = 96, turnover_cap: float = None) -> Dict:
-	"""
-	Mean-variance benchmark that uses the environment's price data directly
-	(without calling env.step) but reproduces the same mid/exec/spread/fee
-	decomposition.
-
-	We approximate:
-	  - ret_mid_arr: mid-price log returns
-	  - ret_exec_arr: exec-price log returns (includes spread)
-	  - trading_cost: env.trading_cost * turnover, with turnover from MV weights.
-
-	New:
-	  - turnover_cap (hard cap), applied ONLY to risky assets (all except last column).
-	    CASH is last asset and is adjusted to keep sum(w)=1.
-	    Constraint: sum(|w_risky_new - w_risky_prev|) <= turnover_cap
-	"""
-
-	def _apply_turnover_cap_risky_only(w_target: np.ndarray, w_prev: np.ndarray, cap: float) -> np.ndarray:
-		"""
-		Apply hard turnover cap to risky sleeve only (w[:-1]).
-		Then set CASH (last weight) = 1 - sum(risky), clipped at 0, and renormalize
-		risky if needed so that CASH stays >= 0 and sum(w)=1.
-
-		This keeps long-only and sum-to-1, and ensures risky turnover <= cap.
-		"""
-		w_target = np.asarray(w_target, dtype=np.float64)
-		w_prev = np.asarray(w_prev, dtype=np.float64)
-
-		n = w_target.size
-		if n < 2:
-			return w_target.astype(np.float32)
-
-		# If no/invalid cap -> just clean & enforce cash-last structure
-		if cap is None:
-			risky = np.clip(w_target[:-1], 0.0, np.inf)
-			sr = float(risky.sum())
-			cash = 1.0 - sr
-			if cash < 0.0:
-				# scale down risky to make room for non-negative cash
-				if sr > 0:
-					risky = risky / sr
-					sr = 1.0
-				cash = 0.0
-			w_new = np.empty_like(w_target)
-			w_new[:-1] = risky
-			w_new[-1] = cash
-			# (Optional) tiny numerical fix
-			total = float(w_new.sum())
-			if total > 0:
-				w_new /= total
-			return w_new.astype(np.float32)
-
-		cap = float(cap)
-		if (not np.isfinite(cap)) or cap < 0.0:
-			# treat invalid as unconstrained
-			return _apply_turnover_cap_risky_only(w_target, w_prev, None)
-
-		# Work on risky sleeve only
-		rt = np.clip(w_target[:-1], 0.0, np.inf)
-		rp = np.clip(w_prev[:-1], 0.0, np.inf)
-
-		# Ensure prev risky is feasible with cash>=0 (should already be)
-		srp = float(rp.sum())
-		if srp > 1.0 + 1e-12:
-			rp = rp / srp
-			srp = 1.0
-
-		# Turnover on risky only
 		to = float(np.sum(np.abs(rt - rp)))
-		if (not np.isfinite(to)) or to <= 1e-12 or to <= cap:
+		if to <= cap_eff or to <= 1e-12:
 			risky_new = rt
+			to_eff = to
 		else:
-			alpha = cap / to  # (0,1)
+			alpha = cap_eff / to
 			risky_new = rp + alpha * (rt - rp)
+			to_eff = float(np.sum(np.abs(risky_new - rp)))
 
-		# Enforce non-neg
-		risky_new = np.clip(risky_new, 0.0, np.inf)
+	risky_new = np.clip(risky_new, 0.0, np.inf)
 
-		# Set cash to keep sum=1 and cash>=0
-		sr = float(risky_new.sum())
-		cash = 1.0 - sr
-		if cash < 0.0:
-			# scale down risky to fit
-			if sr > 0.0:
-				risky_new = risky_new / sr
-				sr = 1.0
-			cash = 0.0
+	# cash adjusts to keep sum=1
+	sr = float(risky_new.sum())
+	cash = 1.0 - sr
+	if cash < 0.0:
+		# scale down risky to fit cash>=0
+		if sr > 0:
+			risky_new = risky_new / sr
+			sr = 1.0
+		cash = 0.0
 
-		w_new = np.empty(n, dtype=np.float64)
-		w_new[:-1] = risky_new
-		w_new[-1] = cash
+	w_new = np.empty(n, dtype=np.float64)
+	w_new[:-1] = risky_new
+	w_new[-1] = cash
 
-		# Final numerical normalization (should already sum ~1)
-		total = float(w_new.sum())
-		if total > 0 and abs(total - 1.0) > 1e-10:
-			w_new /= total
+	# final normalize (tiny numerical)
+	total = float(w_new.sum())
+	if total > 0 and abs(total - 1.0) > 1e-10:
+		w_new /= total
 
-		return w_new.astype(np.float32)
+	return w_new.astype(np.float32), float(to_eff)
 
+
+def estimate_bars_per_day_median(timestamps: np.ndarray) -> float:
+	idx = pd.DatetimeIndex(pd.to_datetime(timestamps))
+	s = pd.Series(1, index=idx)
+	bpd = float(s.groupby(s.index.date).sum().median())
+	return max(1.0, bpd)
+
+
+def backtest_mean_variance(
+	env,
+	window_steps: int = 96,
+	turnover_cap_step: Optional[float] = None,
+	turnover_cap_daily: Optional[float] = None,
+	target_daily_return_pct: Optional[float] = None,
+	target_daily_vol_pct: Optional[float] = None,
+	w_max_risky: Optional[float] = 0.25,
+	w_max_cash: float = 1.0,
+	eps: float = 1e-6,
+) -> Dict:
+	"""
+	Mean-variance benchmark with:
+	  - long-only, no leverage
+	  - CASH = last asset
+	  - turnover caps (risky sleeve only): per step + per day budget
+	  - targets (in %): daily return / daily vol (ex-ante). We *target vol* via scaling k<=1.
+	"""
+    turnover_cap_daily = turnover_cap_step * 10
 	# Arrays: [T, N]
 	ret_mid = env.ret_mid_arr
 	ret_exec = env.ret_exec_arr
-	timestamps = env.timestamps
-	trading_cost_per_unit = getattr(env, "trading_cost", 0.0)
+	timestamps = pd.to_datetime(env.timestamps)
+	trading_cost_per_unit = float(getattr(env, "trading_cost", 0.0))
 
 	start_idx = env.window
 	T, n_assets = ret_mid.shape
+	if n_assets < 2:
+		raise ValueError("Need at least 2 assets (including CASH as last column).")
+
+	n_risky = n_assets - 1
+
+	# bounds
+	if w_max_risky is None:
+		ub_risky = np.full(n_risky, np.inf, dtype=np.float64)
+		ub_all = np.array([np.inf] * n_risky + [w_max_cash], dtype=np.float64)
+	else:
+		ub_risky = np.full(n_risky, float(w_max_risky), dtype=np.float64)
+		ub_all = np.array([float(w_max_risky)] * n_risky + [float(w_max_cash)], dtype=np.float64)
+
+	# targets in decimals (per day)
+	target_vol_day = None if target_daily_vol_pct is None else float(target_daily_vol_pct) / 100.0
+	target_ret_day = None if target_daily_return_pct is None else float(target_daily_return_pct) / 100.0
+
+	bars_per_day = estimate_bars_per_day_median(timestamps)
 
 	weights_hist: List[np.ndarray] = []
 	returns_net_hist: List[float] = []
@@ -334,43 +404,114 @@ def backtest_mean_variance(env: PortfolioEnv, window_steps: int = 96, turnover_c
 	turnover_hist: List[float] = []
 	ts_hist: List[pd.Timestamp] = []
 
+	# extra diagnostics (useful in paper)
+	ex_ante_mu_day_hist: List[float] = []
+	ex_ante_sig_day_hist: List[float] = []
+	k_used_hist: List[float] = []
+	ret_target_feasible_hist: List[bool] = []
+
 	equity = 1.0
-	prev_w = np.ones(n_assets, dtype=np.float32) / n_assets
+	prev_w = project_simplex_with_bounds(np.ones(n_assets, dtype=np.float64) / n_assets, ub_all).astype(np.float32)
+
+	# daily turnover budget tracking
+	last_day = None
+	day_used = 0.0
 
 	for t in range(start_idx, T):
 		is_rebal = ((t - start_idx) % window_steps == 0)
 
-		# 1) Recompute MV weights every 'window_steps' steps
+		# reset daily budget
+		day = timestamps[t].date()
+		if last_day is None or day != last_day:
+			last_day = day
+			day_used = 0.0
+
 		if is_rebal:
-			start_win = max(env.window, t - window_steps)
-			R_win = ret_mid[start_win:t, :]
-			if R_win.shape[0] < 2:
+			start_win = max(start_idx, t - window_steps)
+			R_win_all = ret_mid[start_win:t, :]
+			if R_win_all.shape[0] < 2:
 				w = prev_w
+				to_eff = 0.0
+				mu_day_at_k = np.nan
+				sig_day_at_k = np.nan
+				k = 0.0
+				feasible = True
 			else:
-				w_target = mean_variance_weights(R_win)
-				w = _apply_turnover_cap_risky_only(w_target, prev_w, turnover_cap)
+				R_win_risky = R_win_all[:, :n_risky]
+
+				# (1) risky direction
+				w_dir_risky = mv_direction_risky_only(R_win_risky, ub_risky, eps=eps)
+
+				# (2) ex-ante per-bar stats -> per-day approx
+				mu_bar, sig_bar = ex_ante_mu_sigma_bar(R_win_risky, w_dir_risky, eps=eps)
+				mu_day_dir = mu_bar * bars_per_day
+				sig_day_dir = sig_bar * np.sqrt(bars_per_day)
+
+				# (3) choose k<=1: VOL targeting priority
+				if target_vol_day is not None and np.isfinite(target_vol_day):
+					k_vol = min(1.0, target_vol_day / (sig_day_dir + 1e-12))
+				else:
+					k_vol = 1.0
+				k = float(np.clip(k_vol, 0.0, 1.0))
+
+				mu_day_at_k = float(k * mu_day_dir)
+				sig_day_at_k = float(k * sig_day_dir)
+
+				# return feasibility under constraints (not forced)
+				if target_ret_day is not None and np.isfinite(target_ret_day):
+					# cannot exceed k=1 without leverage
+					feasible = bool(mu_day_at_k + 1e-12 >= target_ret_day) if target_ret_day >= 0 else True
+				else:
+					feasible = True
+
+				# (4) build full target with cash absorbing
+				w_target = np.zeros(n_assets, dtype=np.float64)
+				w_target[:n_risky] = k * w_dir_risky
+				w_target[-1] = 1.0 - float(w_target[:n_risky].sum())
+
+				# enforce bounds + sum=1 exactly
+				w_target = project_simplex_with_bounds(w_target, ub_all).astype(np.float32)
+
+				# (5) turnover caps (risky only)
+				day_remaining = None
+				if turnover_cap_daily is not None and np.isfinite(turnover_cap_daily) and turnover_cap_daily >= 0:
+					day_remaining = float(turnover_cap_daily) - float(day_used)
+
+				w, to_eff = apply_turnover_cap_risky_only(
+					w_target=w_target,
+					w_prev=prev_w,
+					cap_step=turnover_cap_step,
+					cap_day_remaining=day_remaining,
+				)
+
+				# Update daily used turnover (risky sleeve)
+				day_used += float(to_eff)
 		else:
 			w = prev_w
+			to_eff = 0.0
+			mu_day_at_k = np.nan
+			sig_day_at_k = np.nan
+			k = np.nan
+			feasible = True
 
-		# 2) Mid / Exec returns at time t
+		# Mid / Exec returns at time t
 		step_ret_mid_vec = ret_mid[t, :]
 		step_ret_exec_vec = ret_exec[t, :]
 
 		portfolio_log_ret_mid = float((w * step_ret_mid_vec).sum())
 		portfolio_log_ret_exec = float((w * step_ret_exec_vec).sum())
 
-		step_return_mid = np.exp(portfolio_log_ret_mid) - 1.0
-		step_return_exec = np.exp(portfolio_log_ret_exec) - 1.0
+		step_return_mid = float(np.exp(portfolio_log_ret_mid) - 1.0)
+		step_return_exec = float(np.exp(portfolio_log_ret_exec) - 1.0)
 
-		spread_cost = step_return_mid - step_return_exec
+		spread_cost = float(step_return_mid - step_return_exec)
 
-		# 3) Turnover and fee
-		# IMPORTANT: turnover computed on risky only (since cap applies to risky only)
-		turnover = float(np.sum(np.abs(w[:-1] - prev_w[:-1])))
-		fee_cost = trading_cost_per_unit * turnover
+		# Turnover and fee (risky only)
+		turnover_risky = float(np.sum(np.abs(w[:-1] - prev_w[:-1])))
+		fee_cost = float(trading_cost_per_unit * turnover_risky)
 
-		# 4) Net return and equity
-		step_return_after_cost = step_return_exec - fee_cost
+		# Net return and equity
+		step_return_after_cost = float(step_return_exec - fee_cost)
 		equity *= (1.0 + step_return_after_cost)
 
 		weights_hist.append(w)
@@ -379,11 +520,16 @@ def backtest_mean_variance(env: PortfolioEnv, window_steps: int = 96, turnover_c
 		returns_exec_hist.append(step_return_exec)
 		spread_hist.append(spread_cost)
 		fee_hist.append(fee_cost)
-		equity_hist.append(equity)
-		turnover_hist.append(turnover)
+		equity_hist.append(float(equity))
+		turnover_hist.append(turnover_risky)
+		ts_hist.append(timestamps[t])
+
+		ex_ante_mu_day_hist.append(mu_day_at_k)
+		ex_ante_sig_day_hist.append(sig_day_at_k)
+		k_used_hist.append(float(k) if np.isfinite(k) else np.nan)
+		ret_target_feasible_hist.append(bool(feasible))
 
 		prev_w = w
-		ts_hist.append(timestamps[t])
 
 	return _build_allocation_and_perf(
 		env,
@@ -396,7 +542,16 @@ def backtest_mean_variance(env: PortfolioEnv, window_steps: int = 96, turnover_c
 		equity_hist,
 		turnover_hist,
 		ts_hist,
+		# Tu peux ajouter ces champs dans ton builder si tu veux les exporter
+		extras={
+			"bars_per_day_median": bars_per_day,
+			"ex_ante_mu_day": ex_ante_mu_day_hist,
+			"ex_ante_sig_day": ex_ante_sig_day_hist,
+			"k_used": k_used_hist,
+			"ret_target_feasible": ret_target_feasible_hist,
+		},
 	)
+
 
 
 
