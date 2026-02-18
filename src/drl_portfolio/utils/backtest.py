@@ -542,14 +542,6 @@ def backtest_mean_variance(
 		equity_hist,
 		turnover_hist,
 		ts_hist,
-		# Tu peux ajouter ces champs dans ton builder si tu veux les exporter
-		extras={
-			"bars_per_day_median": bars_per_day,
-			"ex_ante_mu_day": ex_ante_mu_day_hist,
-			"ex_ante_sig_day": ex_ante_sig_day_hist,
-			"k_used": k_used_hist,
-			"ret_target_feasible": ret_target_feasible_hist,
-		},
 	)
 
 
