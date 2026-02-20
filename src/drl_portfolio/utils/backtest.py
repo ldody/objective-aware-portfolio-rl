@@ -447,13 +447,17 @@ def backtest_mean_variance(
 				mu_bar, sig_bar = ex_ante_mu_sigma_bar(R_win_risky, w_dir_risky, eps=eps)
 				mu_day_dir = mu_bar * bars_per_day
 				sig_day_dir = sig_bar * np.sqrt(bars_per_day)
-
-				# (3) choose k<=1: VOL targeting priority
-				if target_vol_day is not None and np.isfinite(target_vol_day):
-					k_vol = min(1.0, target_vol_day / (sig_day_dir + 1e-12))
+				
+				# ✅ NEW — No trade if expected return <= 0
+				if mu_day_dir <= 0:
+					k = 0.0
 				else:
-					k_vol = 1.0
-				k = float(np.clip(k_vol, 0.0, 1.0))
+					# (3) choose k<=1: VOL targeting priority
+					if target_vol_day is not None and np.isfinite(target_vol_day):
+						k_vol = min(1.0, target_vol_day / (sig_day_dir + 1e-12))
+					else:
+						k_vol = 1.0
+					k = float(np.clip(k_vol, 0.0, 1.0))
 
 				mu_day_at_k = float(k * mu_day_dir)
 				sig_day_at_k = float(k * sig_day_dir)
