@@ -356,7 +356,7 @@ def backtest_mean_variance(
 	target_daily_return_pct: Optional[float] = None,
 	target_daily_vol_pct: Optional[float] = None,
 	w_max_risky: Optional[float] = 0.25,
-	w_max_cash: float = 0.07,
+	w_max_cash: float = 0.05,
 	eps: float = 1e-6,
 ) -> Dict:
 	"""
@@ -366,7 +366,7 @@ def backtest_mean_variance(
 	  - turnover caps (risky sleeve only): per step + per day budget
 	  - targets (in %): daily return / daily vol (ex-ante). We *target vol* via scaling k<=1.
 	"""
-	turnover_cap_step = turnover_cap_step#/10
+	turnover_cap_step = turnover_cap_step/10
 	turnover_cap_daily = turnover_cap_step * 10
 	# Arrays: [T, N]
 	ret_mid = env.ret_mid_arr
