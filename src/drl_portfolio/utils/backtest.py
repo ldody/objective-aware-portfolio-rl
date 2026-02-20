@@ -366,8 +366,8 @@ def backtest_mean_variance(
 	  - turnover caps (risky sleeve only): per step + per day budget
 	  - targets (in %): daily return / daily vol (ex-ante). We *target vol* via scaling k<=1.
 	"""
-	turnover_cap_step = turnover_cap_step/10
-	turnover_cap_daily = turnover_cap_step * 10
+	#turnover_cap_step = turnover_cap_step/10
+	#turnover_cap_daily = turnover_cap_step * 10
 	# Arrays: [T, N]
 	ret_mid = env.ret_mid_arr
 	ret_exec = env.ret_exec_arr
@@ -484,7 +484,9 @@ def backtest_mean_variance(
 					cap_step=turnover_cap_step,
 					cap_day_remaining=day_remaining,
 				)
-
+				
+				w = project_simplex_with_bounds(w.astype(np.float64), ub_all).astype(np.float32)
+				
 				# Update daily used turnover (risky sleeve)
 				day_used += float(to_eff)
 		else:
