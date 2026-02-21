@@ -348,6 +348,18 @@ def estimate_bars_per_day_median(timestamps: np.ndarray) -> float:
 	return max(1.0, bpd)
 
 
+def weights_to_action_logits(w: np.ndarray, clip: float = 20.0) -> np.ndarray:
+	"""
+	Convert weights -> env logits so that softmax(logits) = weights.
+	Required because env.step() expects logits, not weights.
+	"""
+	w = np.asarray(w, dtype=np.float64)
+	w = np.clip(w, 1e-12, 1.0)
+	logits = np.log(w)
+	logits = logits - np.max(logits)
+	return np.clip(logits, -clip, clip).astype(np.float32)
+
+
 def backtest_mean_variance(
 	env,
 	window_steps: int = 96,
@@ -360,28 +372,25 @@ def backtest_mean_variance(
 	eps: float = 1e-6,
 ) -> Dict:
 	"""
-	Mean-variance benchmark with:
-	  - long-only, no leverage
-	  - CASH = last asset
-	  - turnover caps (risky sleeve only): per step + per day budget
-	  - targets (in %): daily return / daily vol (ex-ante). We *target vol* via scaling k<=1.
+	Mean-variance benchmark aligned with EW execution model:
+
+	- Uses env.step() (same spread / fees / turnover model as EW)
+	- Long-only, sum=1
+	- CASH = last asset
+	- Turnover caps (risky sleeve)
+	- Optional vol targeting (k <= 1, no leverage)
 	"""
-	turnover_cap_step = turnover_cap_step
-	#turnover_cap_daily = turnover_cap_step * 10
-	# Arrays: [T, N]
-	ret_mid = env.ret_mid_arr
-	ret_exec = env.ret_exec_arr
-	timestamps = pd.to_datetime(env.timestamps)
-	trading_cost_per_unit = float(getattr(env, "trading_cost", 0.0))
 
-	start_idx = env.window
-	T, n_assets = ret_mid.shape
+	obs, _ = env.reset()
+	done = False
+
+	# Dimensions
+	n_assets = env.n_assets
 	if n_assets < 2:
-		raise ValueError("Need at least 2 assets (including CASH as last column).")
-
+		raise ValueError("Need at least 2 assets (including CASH).")
 	n_risky = n_assets - 1
 
-	# bounds
+	# Bounds
 	if w_max_risky is None:
 		ub_risky = np.full(n_risky, np.inf, dtype=np.float64)
 		ub_all = np.array([np.inf] * n_risky + [w_max_cash], dtype=np.float64)
@@ -389,154 +398,147 @@ def backtest_mean_variance(
 		ub_risky = np.full(n_risky, float(w_max_risky), dtype=np.float64)
 		ub_all = np.array([float(w_max_risky)] * n_risky + [float(w_max_cash)], dtype=np.float64)
 
-	# targets in decimals (per day)
+	# Targets
 	target_vol_day = None if target_daily_vol_pct is None else float(target_daily_vol_pct) / 100.0
-	target_ret_day = None if target_daily_return_pct is None else float(target_daily_return_pct) / 100.0
 
+	timestamps = pd.to_datetime(env.timestamps)
 	bars_per_day = estimate_bars_per_day_median(timestamps)
 
-	weights_hist: List[np.ndarray] = []
-	returns_net_hist: List[float] = []
-	returns_mid_hist: List[float] = []
-	returns_exec_hist: List[float] = []
-	spread_hist: List[float] = []
-	fee_hist: List[float] = []
-	equity_hist: List[float] = []
-	turnover_hist: List[float] = []
-	ts_hist: List[pd.Timestamp] = []
+	# Histories
+	weights_hist = []
+	returns_net_hist = []
+	returns_mid_hist = []
+	returns_exec_hist = []
+	spread_hist = []
+	fee_hist = []
+	equity_hist = []
+	turnover_hist = []
+	ts_hist = []
 
-	# extra diagnostics (useful in paper)
-	ex_ante_mu_day_hist: List[float] = []
-	ex_ante_sig_day_hist: List[float] = []
-	k_used_hist: List[float] = []
-	ret_target_feasible_hist: List[bool] = []
+	# Init weights
+	prev_w = project_simplex_with_bounds(
+		np.ones(n_assets) / n_assets, ub_all
+	).astype(np.float32)
 
-	equity = 1.0
-	prev_w = project_simplex_with_bounds(np.ones(n_assets, dtype=np.float64) / n_assets, ub_all).astype(np.float32)
+	env.prev_weights = prev_w.copy()
+	prev_action = weights_to_action_logits(prev_w)
 
-	# daily turnover budget tracking
+	# Daily turnover tracking
 	last_day = None
 	day_used = 0.0
 
-	for t in range(start_idx, T):
-		is_rebal = ((t - start_idx) % window_steps == 0)
+	ret_mid = env.ret_mid_arr
 
-		# reset daily budget
+	while not done:
+
+		t = env.t_idx
+		if t >= len(timestamps):
+			break
+
+		is_rebal = (t >= env.window) and ((t - env.window) % window_steps == 0)
+
+		# Reset daily budget
 		day = timestamps[t].date()
 		if last_day is None or day != last_day:
 			last_day = day
 			day_used = 0.0
 
+		action = prev_action
+
 		if is_rebal:
+
+			start_idx = env.window
 			start_win = max(start_idx, t - window_steps)
 			R_win_all = ret_mid[start_win:t, :]
-			if R_win_all.shape[0] < 2:
-				w = prev_w
-				to_eff = 0.0
-				mu_day_at_k = np.nan
-				sig_day_at_k = np.nan
-				k = 0.0
-				feasible = True
-			else:
+
+			if R_win_all.shape[0] >= 2:
+
 				R_win_risky = R_win_all[:, :n_risky]
 
-				# (1) risky direction
-				w_dir_risky = mv_direction_risky_only(R_win_risky, ub_risky, eps=eps)
+				# ===== 1) MV direction =====
+				w_dir_risky = mv_direction_risky_only(
+					R_win_risky, ub_risky, eps=eps
+				)
 
-				# (2) ex-ante per-bar stats -> per-day approx
-				mu_bar, sig_bar = ex_ante_mu_sigma_bar(R_win_risky, w_dir_risky, eps=eps)
+				# ===== 2) Ex-ante stats =====
+				mu_bar, sig_bar = ex_ante_mu_sigma_bar(
+					R_win_risky, w_dir_risky, eps=eps
+				)
+
 				mu_day_dir = mu_bar * bars_per_day
 				sig_day_dir = sig_bar * np.sqrt(bars_per_day)
-				
-				# ✅ NEW — No trade if expected return <= 0
+
+				# ===== 3) Scaling k =====
 				if mu_day_dir <= 0:
 					k = 0.0
 				else:
-					# (3) choose k<=1: VOL targeting priority
-					if target_vol_day is not None and np.isfinite(target_vol_day):
-						k_vol = min(1.0, target_vol_day / (sig_day_dir + 1e-12))
+					if target_vol_day is not None:
+						k_vol = min(
+							1.0,
+							target_vol_day / (sig_day_dir + 1e-12),
+						)
 					else:
 						k_vol = 1.0
+
 					k = float(np.clip(k_vol, 0.0, 1.0))
 
-				mu_day_at_k = float(k * mu_day_dir)
-				sig_day_at_k = float(k * sig_day_dir)
-
-				# return feasibility under constraints (not forced)
-				if target_ret_day is not None and np.isfinite(target_ret_day):
-					# cannot exceed k=1 without leverage
-					feasible = bool(mu_day_at_k + 1e-12 >= target_ret_day) if target_ret_day >= 0 else True
-				else:
-					feasible = True
-
-				# (4) build full target with cash absorbing
+				# ===== 4) Build target =====
 				w_target = np.zeros(n_assets, dtype=np.float64)
 				w_target[:n_risky] = k * w_dir_risky
-				w_target[-1] = 1.0 - float(w_target[:n_risky].sum())
+				w_target[-1] = 1.0 - w_target[:n_risky].sum()
 
-				# enforce bounds + sum=1 exactly
-				w_target = project_simplex_with_bounds(w_target, ub_all).astype(np.float32)
+				w_target = project_simplex_with_bounds(
+					w_target, ub_all
+				).astype(np.float32)
 
-				# (5) turnover caps (risky only)
+				# ===== 5) Turnover caps =====
 				day_remaining = None
-				if turnover_cap_daily is not None and np.isfinite(turnover_cap_daily) and turnover_cap_daily >= 0:
-					day_remaining = float(turnover_cap_daily) - float(day_used)
+				if (
+					turnover_cap_daily is not None
+					and np.isfinite(turnover_cap_daily)
+					and turnover_cap_daily >= 0
+				):
+					day_remaining = (
+						float(turnover_cap_daily) - float(day_used)
+					)
 
-				w, to_eff = apply_turnover_cap_risky_only(
+				w_new, to_eff = apply_turnover_cap_risky_only(
 					w_target=w_target,
 					w_prev=prev_w,
 					cap_step=turnover_cap_step,
 					cap_day_remaining=day_remaining,
 				)
-				
-				w = project_simplex_with_bounds(w.astype(np.float64), ub_all).astype(np.float32)
-				
-				# Update daily used turnover (risky sleeve)
+
+				w_new = project_simplex_with_bounds(
+					w_new.astype(np.float64), ub_all
+				).astype(np.float32)
+
 				day_used += float(to_eff)
-		else:
-			w = prev_w
-			to_eff = 0.0
-			mu_day_at_k = np.nan
-			sig_day_at_k = np.nan
-			k = np.nan
-			feasible = True
 
-		# Mid / Exec returns at time t
-		step_ret_mid_vec = ret_mid[t, :]
-		step_ret_exec_vec = ret_exec[t, :]
+				action = weights_to_action_logits(w_new)
 
-		portfolio_log_ret_mid = float((w * step_ret_mid_vec).sum())
-		portfolio_log_ret_exec = float((w * step_ret_exec_vec).sum())
+				prev_w = w_new
+				prev_action = action
 
-		step_return_mid = float(np.exp(portfolio_log_ret_mid) - 1.0)
-		step_return_exec = float(np.exp(portfolio_log_ret_exec) - 1.0)
+		# ===== STEP ENV =====
+		obs, _, terminated, truncated, info = env.step(action)
+		done = terminated or truncated
 
-		spread_cost = float(step_return_mid - step_return_exec)
+		weights_hist.append(info["weights"])
+		returns_net_hist.append(info["step_return"])
+		returns_mid_hist.append(
+			info.get("step_return_mid", info["step_return"])
+		)
+		returns_exec_hist.append(
+			info.get("step_return_exec", info["step_return"])
+		)
+		spread_hist.append(info.get("spread_cost", 0.0))
+		fee_hist.append(info.get("fee_cost", 0.0))
+		equity_hist.append(info["equity"])
+		turnover_hist.append(info["turnover"])
 
-		# Turnover and fee (risky only)
-		turnover_risky = float(np.sum(np.abs(w[:-1] - prev_w[:-1])))
-		fee_cost = float(trading_cost_per_unit * turnover_risky)
-
-		# Net return and equity
-		step_return_after_cost = float(step_return_exec - fee_cost)
-		equity *= (1.0 + step_return_after_cost)
-
-		weights_hist.append(w)
-		returns_net_hist.append(step_return_after_cost)
-		returns_mid_hist.append(step_return_mid)
-		returns_exec_hist.append(step_return_exec)
-		spread_hist.append(spread_cost)
-		fee_hist.append(fee_cost)
-		equity_hist.append(float(equity))
-		turnover_hist.append(turnover_risky)
-		ts_hist.append(timestamps[t])
-
-		ex_ante_mu_day_hist.append(mu_day_at_k)
-		ex_ante_sig_day_hist.append(sig_day_at_k)
-		k_used_hist.append(float(k) if np.isfinite(k) else np.nan)
-		ret_target_feasible_hist.append(bool(feasible))
-
-		prev_w = w
+		current_ts = env.timestamps[env.t_idx - 1]
+		ts_hist.append(current_ts)
 
 	return _build_allocation_and_perf(
 		env,
