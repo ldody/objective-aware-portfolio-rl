@@ -368,7 +368,7 @@ def backtest_mean_variance(
 	target_daily_return_pct: Optional[float] = None,
 	target_daily_vol_pct: Optional[float] = None,
 	w_max_risky: Optional[float] = 0.25,
-	w_max_cash: float = 0.05,
+	w_max_cash: float = 1,
 	eps: float = 1e-6,
 ) -> Dict:
 	"""
