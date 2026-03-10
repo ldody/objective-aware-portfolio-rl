@@ -337,7 +337,7 @@ def run_full_experiment(
 	turnover_cap_step = params_df.loc['Turnover','Value']
 	target_daily_return_pct = params_df.loc['Return','Value']
 	target_daily_vol_pct = params_df.loc['Volatility','Value']
-	bt_mv = backtest_mean_variance(test_env_nc, turnover_cap_step=turnover_cap_step, target_daily_return_pct=target_daily_return_pct, target_daily_vol_pct=target_daily_vol_pct)
+	#bt_mv = backtest_mean_variance(test_env_nc, turnover_cap_step=turnover_cap_step, target_daily_return_pct=target_daily_return_pct, target_daily_vol_pct=target_daily_vol_pct)
 	
 	"""
 	res_sac = summarize_strategy("SAC constrained", bt_sac)
@@ -360,7 +360,7 @@ def run_full_experiment(
 	#bt_eq["performance"].to_csv(results_dir / f"perf_equal_weight_{'_'.join(filename_ext)}.csv")
 
 	# Mean-variance
-	bt_mv["allocation"].to_csv(results_dir / f"alloc_mean_variance_{'_'.join(filename_ext)}.csv")
-	bt_mv["performance"].to_csv(results_dir / f"perf_mean_variance_{'_'.join(filename_ext)}.csv")
+	#bt_mv["allocation"].to_csv(results_dir / f"alloc_mean_variance_{'_'.join(filename_ext)}.csv")
+	#bt_mv["performance"].to_csv(results_dir / f"perf_mean_variance_{'_'.join(filename_ext)}.csv")
 
 	print(f"\nSaved metrics to: {results_dir}")
