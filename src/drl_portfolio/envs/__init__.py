@@ -1,7 +1,13 @@
 from .portfolio_env import (
-    PortfolioEnv,
-    PortfolioEnvNoConstraints,
-    ConstraintConfig,
+	PortfolioEnv,
+	PortfolioEnvNoConstraints,
+	ConstraintConfig,
 )
+from .vector_env import VectorPortfolioEnv
 
-__all__ = ["PortfolioEnv", "PortfolioEnvNoConstraints", "ConstraintConfig"]
+__all__ = [
+	"PortfolioEnv",
+	"PortfolioEnvNoConstraints",
+	"ConstraintConfig",
+	"VectorPortfolioEnv",
+]
