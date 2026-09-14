@@ -367,5 +367,3 @@ It does not constitute investment advice, a recommendation to buy or sell securi
 ## Author
 
 **Léo Dody**
-
-Research interests: financial machine learning, deep reinforcement learning, portfolio optimization, large language models, forecast-driven decision making, and quantitative finance.
