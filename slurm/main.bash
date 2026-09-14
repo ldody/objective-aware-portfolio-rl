@@ -2,13 +2,14 @@
 #SBATCH --time=24:00:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
-#SBATCH --ntasks-per-node=1
+#SBATCH --ntasks-per-node=20
 #SBATCH --mem-per-cpu=4000
 #SBATCH --mail-type=all
 #SBATCH --mail-user=leo.dody1@univ-lyon3.fr
-#SBATCH --output=DRL.out #/dev/null
-#SBATCH --job-name=DRL
+#SBATCH --output=DRL_%a.out #/dev/null
+#SBATCH --job-name=DRL_%a
 #SBATCH --partition=c6420-ib100
+#SBATCH --array=0-24%10
 
 
 module purge
@@ -18,6 +19,6 @@ source /home_nfs/polytech/leo.dody/PhD/Article_3/PhD_article_3/.venv/bin/activat
 
 export PYTHONUNBUFFERED=TRUE
 
-python3 ../main.py -cmb True 
+python3 ../main.py --task-id $SLURM_ARRAY_TASK_ID
 
 deactivate
